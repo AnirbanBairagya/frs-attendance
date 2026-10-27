@@ -1,25 +1,184 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Faculty Management</title>
-<style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#172033}.header{background:#17283b;color:#fff;padding:22px 30px}.header h1{margin:0}.nav{background:#fff;padding:12px 30px;box-shadow:0 2px 8px rgba(0,0,0,.06)}.nav a{margin-right:18px;color:#1d4ed8;text-decoration:none;font-weight:600}.container{max-width:1250px;margin:28px auto;padding:0 20px}.top{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap}.button{background:#2563eb;color:#fff;text-decoration:none;padding:11px 18px;border-radius:7px;font-weight:700}.table-wrap{margin-top:22px;background:#fff;border-radius:10px;overflow:auto;box-shadow:0 3px 12px rgba(0,0,0,.08)}table{width:100%;border-collapse:collapse;min-width:850px}th,td{padding:13px;border-bottom:1px solid #eee;text-align:left}th{background:#f8fafc}.active{color:#15803d;font-weight:700}.inactive{color:#dc2626;font-weight:700}.back{display:inline-block;margin-top:22px;color:#1d4ed8;text-decoration:none}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faculty Management</title>
+    <style>
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #172033
+        }
+
+        .header {
+            background: #17283b;
+            color: #fff;
+            padding: 22px 30px
+        }
+
+        .header h1 {
+            margin: 0
+        }
+
+        .nav {
+            background: #fff;
+            padding: 12px 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .06)
+        }
+
+        .nav a {
+            margin-right: 18px;
+            color: #1d4ed8;
+            text-decoration: none;
+            font-weight: 600
+        }
+
+        .container {
+            max-width: 1250px;
+            margin: 28px auto;
+            padding: 0 20px
+        }
+
+        .top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap
+        }
+
+        .button {
+            background: #2563eb;
+            color: #fff;
+            text-decoration: none;
+            padding: 11px 18px;
+            border-radius: 7px;
+            font-weight: 700
+        }
+
+        .table-wrap {
+            margin-top: 22px;
+            background: #fff;
+            border-radius: 10px;
+            overflow: auto;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, .08)
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 850px
+        }
+
+        th,
+        td {
+            padding: 13px;
+            border-bottom: 1px solid #eee;
+            text-align: left
+        }
+
+        th {
+            background: #f8fafc
+        }
+
+        .active {
+            color: #15803d;
+            font-weight: 700
+        }
+
+        .inactive {
+            color: #dc2626;
+            font-weight: 700
+        }
+
+        .back {
+            display: inline-block;
+            margin-top: 22px;
+            color: #1d4ed8;
+            text-decoration: none
+        }
+
+        .nav {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap
+        }
+
+        .nav .logout {
+            margin: 0 0 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 10px
+        }
+
+        .nav .logout .who {
+            color: #6b7280;
+            font-size: 14px
+        }
+
+        .nav .logout button {
+            background: #fff;
+            color: #172033;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-weight: 600;
+            cursor: pointer
+        }
+    </style>
 </head>
+
 <body>
-<div class="header"><h1>Faculty Management</h1></div>
-<div class="nav"><a href="{{ url_for('dashboard') }}">Dashboard</a><a href="{{ url_for('faculty') }}">Faculty</a><a href="{{ url_for('attendance') }}">Attendance</a><a href="{{ url_for('reports') }}">Reports</a></div>
-<div class="container">
-<div class="top"><h2>Registered Faculty</h2><a class="button" href="{{ url_for('register_faculty') }}">+ Register Faculty</a></div>
-{% if faculty_list %}
-<div class="table-wrap"><table><thead><tr><th>Faculty ID</th><th>Name</th><th>Department</th><th>Designation</th><th>Email</th><th>Phone</th><th>Status</th></tr></thead><tbody>
-{% for faculty in faculty_list %}<tr>
-<td>{{ faculty.faculty_id }}</td><td>{{ faculty.name }}</td><td>{{ faculty.department or '-' }}</td><td>{{ faculty.designation or '-' }}</td><td>{{ faculty.email or '-' }}</td><td>{{ faculty.phone or '-' }}</td>
-<td>{% if faculty.active %}<span class="active">Active</span>{% else %}<span class="inactive">Inactive</span>{% endif %}</td>
-</tr>{% endfor %}
-</tbody></table></div>
-{% else %}<p>No faculty registered.</p>{% endif %}
-<a class="back" href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
-</div>
-</body></html>
+    <div class="header">
+        <h1>Faculty Management</h1>
+    </div>
+    <div class="nav"><a href="{{ url_for('dashboard') }}">Dashboard</a><a href="{{ url_for('faculty') }}">Faculty</a><a
+            href="{{ url_for('attendance') }}">Attendance</a><a href="{{ url_for('reports') }}">Reports</a>
+        <form class="logout" method="post" action="{{ url_for('logout') }}"><span class="who">{{ admin_username
+                }}</span><button type="submit">Log out</button></form>
+    </div>
+    <div class="container">
+        <div class="top">
+            <h2>Registered Faculty</h2><a class="button" href="{{ url_for('register_faculty') }}">+ Register Faculty</a>
+        </div>
+        {% if faculty_list %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Faculty ID</th>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th>Designation</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for faculty in faculty_list %}<tr>
+                        <td>{{ faculty.faculty_id }}</td>
+                        <td>{{ faculty.name }}</td>
+                        <td>{{ faculty.department or '-' }}</td>
+                        <td>{{ faculty.designation or '-' }}</td>
+                        <td>{{ faculty.email or '-' }}</td>
+                        <td>{{ faculty.phone or '-' }}</td>
+                        <td>{% if faculty.active %}<span class="active">Active</span>{% else %}<span
+                                class="inactive">Inactive</span>{% endif %}</td>
+                    </tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}<p>No faculty registered.</p>{% endif %}
+        <a class="back" href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
+    </div>
+</body>
+
+</html>

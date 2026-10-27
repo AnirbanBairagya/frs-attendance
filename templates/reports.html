@@ -1,26 +1,240 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Monthly Attendance Report</title>
-<style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#172033}.header{background:#17283b;color:#fff;padding:22px 30px}.nav{background:#fff;padding:12px 30px;box-shadow:0 2px 8px rgba(0,0,0,.06)}.nav a{margin-right:18px;color:#1d4ed8;text-decoration:none;font-weight:600}.container{max-width:1300px;margin:28px auto;padding:0 20px}.panel{background:#fff;border-radius:10px;padding:20px;box-shadow:0 3px 12px rgba(0,0,0,.08);margin-bottom:20px}.filters{display:flex;gap:15px;align-items:end;flex-wrap:wrap}.field label{display:block;font-weight:700;font-size:14px;margin-bottom:6px}.field input,.field select,.button,.export{height:42px;padding:8px 12px;border-radius:6px;border:1px solid #cbd5e1;font-size:15px}.button{background:#f2a62b;border:0;font-weight:700;cursor:pointer}.export{display:inline-flex;align-items:center;text-decoration:none;background:#15803d;color:#fff;border:0;font-weight:700}.table-wrap{background:#fff;border-radius:10px;overflow:auto;box-shadow:0 3px 12px rgba(0,0,0,.08)}table{width:100%;border-collapse:collapse;min-width:950px}th,td{padding:13px;border-bottom:1px solid #eee;text-align:left}th{background:#f8fafc}.summary{display:flex;gap:28px;flex-wrap:wrap}.metric{font-size:18px}.muted{color:#6b7280}.empty{text-align:center;padding:24px;color:#6b7280}.back{display:inline-block;margin-top:22px;color:#1d4ed8;text-decoration:none}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monthly Attendance Report</title>
+    <style>
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #172033
+        }
+
+        .header {
+            background: #17283b;
+            color: #fff;
+            padding: 22px 30px
+        }
+
+        .nav {
+            background: #fff;
+            padding: 12px 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .06)
+        }
+
+        .nav a {
+            margin-right: 18px;
+            color: #1d4ed8;
+            text-decoration: none;
+            font-weight: 600
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 28px auto;
+            padding: 0 20px
+        }
+
+        .panel {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, .08);
+            margin-bottom: 20px
+        }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            align-items: end;
+            flex-wrap: wrap
+        }
+
+        .field label {
+            display: block;
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 6px
+        }
+
+        .field input,
+        .field select,
+        .button,
+        .export {
+            height: 42px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            font-size: 15px
+        }
+
+        .button {
+            background: #f2a62b;
+            border: 0;
+            font-weight: 700;
+            cursor: pointer
+        }
+
+        .export {
+            display: inline-flex;
+            align-items: center;
+            text-decoration: none;
+            background: #15803d;
+            color: #fff;
+            border: 0;
+            font-weight: 700
+        }
+
+        .table-wrap {
+            background: #fff;
+            border-radius: 10px;
+            overflow: auto;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, .08)
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 950px
+        }
+
+        th,
+        td {
+            padding: 13px;
+            border-bottom: 1px solid #eee;
+            text-align: left
+        }
+
+        th {
+            background: #f8fafc
+        }
+
+        .summary {
+            display: flex;
+            gap: 28px;
+            flex-wrap: wrap
+        }
+
+        .metric {
+            font-size: 18px
+        }
+
+        .muted {
+            color: #6b7280
+        }
+
+        .empty {
+            text-align: center;
+            padding: 24px;
+            color: #6b7280
+        }
+
+        .back {
+            display: inline-block;
+            margin-top: 22px;
+            color: #1d4ed8;
+            text-decoration: none
+        }
+
+        .nav {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap
+        }
+
+        .nav .logout {
+            margin: 0 0 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 10px
+        }
+
+        .nav .logout .who {
+            color: #6b7280;
+            font-size: 14px
+        }
+
+        .nav .logout button {
+            background: #fff;
+            color: #172033;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-weight: 600;
+            cursor: pointer
+        }
+    </style>
 </head>
+
 <body>
-<div class="header"><h1>Monthly Attendance Report</h1></div>
-<div class="nav"><a href="{{ url_for('dashboard') }}">Dashboard</a><a href="{{ url_for('faculty') }}">Faculty</a><a href="{{ url_for('attendance') }}">Attendance</a><a href="{{ url_for('reports') }}">Reports</a></div>
-<div class="container">
-<div class="panel"><form class="filters" method="get" action="{{ url_for('reports') }}">
-<div class="field"><label for="month">Month</label><input id="month" type="month" name="month" value="{{ month }}"></div>
-<div class="field"><label for="department">Department</label><select id="department" name="department"><option value="ALL" {% if department=='ALL' %}selected{% endif %}>All Departments</option>{% for d in departments %}<option value="{{ d.department }}" {% if department==d.department %}selected{% endif %}>{{ d.department }}</option>{% endfor %}</select></div>
-<button class="button" type="submit">VIEW REPORT</button>
-<a class="export" href="{{ url_for('export_csv', month=month, department=department) }}">EXPORT CSV</a>
-</form></div>
-<div class="panel"><div class="summary"><div class="metric"><strong>{{ month_name }} {{ selected_year }}</strong></div><div class="metric">Working Days: <strong>{{ working_days }}</strong></div><div class="metric muted">Sundays excluded; future dates in the current month are excluded.</div></div></div>
-<div class="table-wrap"><table><thead><tr><th>Faculty ID</th><th>Name</th><th>Department</th><th>Present</th><th>Absent</th><th>Late</th><th>Total Working Time</th><th>Attendance %</th></tr></thead><tbody>
-{% for row in report_rows %}<tr><td>{{ row.faculty_id }}</td><td>{{ row.name }}</td><td>{{ row.department or '-' }}</td><td>{{ row.present_days }}</td><td>{{ row.absent_days }}</td><td>{{ row.late_days }}</td><td>{{ row.working_time }}</td><td>{{ "%.1f"|format(row.attendance_percentage) }}%</td></tr>{% else %}<tr><td colspan="8" class="empty">No faculty records found.</td></tr>{% endfor %}
-</tbody></table></div>
-<a class="back" href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
-</div>
-</body></html>
+    <div class="header">
+        <h1>Monthly Attendance Report</h1>
+    </div>
+    <div class="nav"><a href="{{ url_for('dashboard') }}">Dashboard</a><a href="{{ url_for('faculty') }}">Faculty</a><a
+            href="{{ url_for('attendance') }}">Attendance</a><a href="{{ url_for('reports') }}">Reports</a>
+        <form class="logout" method="post" action="{{ url_for('logout') }}"><span class="who">{{ admin_username
+                }}</span><button type="submit">Log out</button></form>
+    </div>
+    <div class="container">
+        <div class="panel">
+            <form class="filters" method="get" action="{{ url_for('reports') }}">
+                <div class="field"><label for="month">Month</label><input id="month" type="month" name="month"
+                        value="{{ month }}"></div>
+                <div class="field"><label for="department">Department</label><select id="department" name="department">
+                        <option value="ALL" {% if department=='ALL' %}selected{% endif %}>All Departments</option>{% for
+                        d in departments %}<option value="{{ d.department }}" {% if department==d.department
+                            %}selected{% endif %}>{{ d.department }}</option>{% endfor %}
+                    </select></div>
+                <button class="button" type="submit">VIEW REPORT</button>
+                <a class="export" href="{{ url_for('export_csv', month=month, department=department) }}">EXPORT CSV</a>
+            </form>
+        </div>
+        <div class="panel">
+            <div class="summary">
+                <div class="metric"><strong>{{ month_name }} {{ selected_year }}</strong></div>
+                <div class="metric">Working Days: <strong>{{ working_days }}</strong></div>
+                <div class="metric muted">Sundays excluded; future dates in the current month are excluded.</div>
+            </div>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Faculty ID</th>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th>Present</th>
+                        <th>Absent</th>
+                        <th>Late</th>
+                        <th>Total Working Time</th>
+                        <th>Attendance %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in report_rows %}<tr>
+                        <td>{{ row.faculty_id }}</td>
+                        <td>{{ row.name }}</td>
+                        <td>{{ row.department or '-' }}</td>
+                        <td>{{ row.present_days }}</td>
+                        <td>{{ row.absent_days }}</td>
+                        <td>{{ row.late_days }}</td>
+                        <td>{{ row.working_time }}</td>
+                        <td>{{ "%.1f"|format(row.attendance_percentage) }}%</td>
+                    </tr>{% else %}<tr>
+                        <td colspan="8" class="empty">No faculty records found.</td>
+                    </tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <a class="back" href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
+    </div>
+</body>
+
+</html>

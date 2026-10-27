@@ -4,17 +4,37 @@ Lightweight Flask dashboard for the BCREC faculty attendance system.
 Recognition is handled by kiosk.py. Flask provides management pages, daily
 attendance, monthly reports, CSV export, and a native-camera enrollment
 launcher.
+
+Access is protected by an admin login. Accounts live in the existing
+admin_users table and are managed with create_admin.py.
 """
 
 import calendar
 import csv
+import hashlib
+import hmac
 import io
 import os
+import secrets
+import sqlite3
 import subprocess
 import sys
+import threading
+import time
 from datetime import date, datetime, timedelta
+from urllib.parse import urlparse
 
-from flask import Flask, Response, render_template, request
+from flask import (
+    Flask,
+    Response,
+    g,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from lite_core import BASE_DIR, DB_PATH, ensure_db
 
@@ -22,20 +42,265 @@ APP_HOST = os.environ.get("ATTENDANCE_HOST", "127.0.0.1")
 APP_PORT = int(os.environ.get("ATTENDANCE_PORT", "5000"))
 APP_DEBUG = os.environ.get("ATTENDANCE_DEBUG", "0") == "1"
 
+# --- Login settings (all overridable with environment variables) -----------
+SESSION_HOURS = float(os.environ.get("ATTENDANCE_SESSION_HOURS", "8"))
+COOKIE_SECURE = os.environ.get("ATTENDANCE_COOKIE_SECURE", "0") == "1"
+MAX_FAILED_LOGINS = int(os.environ.get("ATTENDANCE_MAX_FAILED_LOGINS", "5"))
+LOCKOUT_SECONDS = int(os.environ.get("ATTENDANCE_LOCKOUT_SECONDS", "900"))
+
+
+def load_secret_key():
+    """
+    Key used to sign session cookies.
+
+    Order: ATTENDANCE_SECRET_KEY env var, then a .secret_key file next to this
+    script (created on first run, owner-only permissions). If neither can be
+    used, fall back to a temporary key, which logs everyone out on restart.
+    """
+    env_key = os.environ.get("ATTENDANCE_SECRET_KEY")
+    if env_key:
+        return env_key
+
+    path = os.path.join(BASE_DIR, ".secret_key")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            key = f.read().strip()
+        if key:
+            return key
+    except FileNotFoundError:
+        pass
+    except OSError:
+        return secrets.token_hex(32)
+
+    key = secrets.token_hex(32)
+    try:
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(key)
+    except OSError:
+        print("[auth] Could not save .secret_key; sessions reset on restart.")
+    return key
+
+
 app = Flask(__name__)
+app.config.update(
+    SECRET_KEY=load_secret_key(),
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=COOKIE_SECURE,
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=SESSION_HOURS),
+)
 ensure_db()
 
 
 # Database helper
 # Connect and get database object
 def get_db():
-    import sqlite3
-
     conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
     return conn
 
+
+# ---------------------------------------------------------------------------
+# Admin authentication
+# ---------------------------------------------------------------------------
+# Compared against when the username does not exist, so a wrong username and a
+# wrong password take about the same time.
+DUMMY_HASH = generate_password_hash("not-a-real-password")
+
+PUBLIC_ENDPOINTS = {"login", "static"}
+
+_failed_logins = {}
+_failed_lock = threading.Lock()
+
+
+def lockout_remaining(ip):
+    """Seconds until this IP may try again (0 if it is not locked out)."""
+    now = time.time()
+    with _failed_lock:
+        stamps = [t for t in _failed_logins.get(ip, []) if now - t < LOCKOUT_SECONDS]
+        if stamps:
+            _failed_logins[ip] = stamps
+        else:
+            _failed_logins.pop(ip, None)
+        if len(stamps) >= MAX_FAILED_LOGINS:
+            return int(LOCKOUT_SECONDS - (now - stamps[0])) + 1
+    return 0
+
+
+def record_failed_login(ip):
+    with _failed_lock:
+        _failed_logins.setdefault(ip, []).append(time.time())
+
+
+def clear_failed_logins(ip):
+    with _failed_lock:
+        _failed_logins.pop(ip, None)
+
+
+def admin_exists():
+    conn = get_db()
+    try:
+        return conn.execute("SELECT 1 FROM admin_users LIMIT 1").fetchone() is not None
+    finally:
+        conn.close()
+
+
+def _password_fingerprint(password_hash):
+    # Stored in the session. If the password is reset, the fingerprint no
+    # longer matches and old sessions stop working.
+    return hashlib.sha256((password_hash or "").encode("utf-8")).hexdigest()[:16]
+
+
+def current_admin():
+    """Return the logged-in admin row, or None. Cached per request."""
+    if "admin" in g:
+        return g.admin
+
+    g.admin = None
+    admin_id = session.get("admin_id")
+    if admin_id is not None:
+        conn = get_db()
+        try:
+            row = conn.execute(
+                "SELECT id, username, password_hash FROM admin_users WHERE id=?",
+                (admin_id,),
+            ).fetchone()
+        finally:
+            conn.close()
+
+        if row and hmac.compare_digest(
+            _password_fingerprint(row["password_hash"]),
+            str(session.get("pwv", "")),
+        ):
+            g.admin = row
+        else:
+            session.clear()
+    return g.admin
+
+
+def safe_next(target):
+    """Only allow redirects to a path on this site (no open redirects)."""
+    if not target:
+        return url_for("dashboard")
+    parsed = urlparse(target)
+    if (
+        parsed.scheme
+        or parsed.netloc
+        or not target.startswith("/")
+        or target.startswith("//")
+        or "\\" in target
+    ):
+        return url_for("dashboard")
+    return target
+
+
+def same_origin():
+    """Block cross-site form posts. SameSite=Lax cookies are the first layer."""
+    origin = request.headers.get("Origin") or request.headers.get("Referer")
+    if not origin:
+        return True
+    return urlparse(origin).netloc == request.host
+
+
+@app.before_request
+def require_login():
+    if request.method == "POST" and not same_origin():
+        return Response("Cross-site request blocked.", status=403)
+
+    if request.endpoint in PUBLIC_ENDPOINTS:
+        return None
+
+    if current_admin() is None:
+        if request.method == "GET":
+            return redirect(url_for("login", next=request.full_path.rstrip("?")))
+        return redirect(url_for("login"))
+    return None
+
+
+@app.after_request
+def harden_response(resp):
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("X-Frame-Options", "DENY")
+    resp.headers.setdefault("Referrer-Policy", "same-origin")
+    if request.endpoint != "static":
+        resp.headers["Cache-Control"] = "no-store"
+
+    return resp
+
+
+@app.context_processor
+def inject_admin():
+    """Makes {{ admin_username }} available to every template (used by the nav)."""
+    admin = g.get("admin")
+    return {"admin_username": admin["username"] if admin else ""}
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    next_url = safe_next(request.values.get("next", ""))
+
+    if current_admin() is not None:
+        return redirect(next_url)
+
+    def page(error=None, status=200):
+        return (
+            render_template(
+                "login.html",
+                error=error,
+                next_url=next_url,
+                no_admin=not admin_exists(),
+            ),
+            status,
+        )
+
+    if request.method == "GET":
+        return page()
+
+    ip = request.remote_addr or "unknown"
+    wait = lockout_remaining(ip)
+    if wait:
+        minutes = max(1, (wait + 59) // 60)
+        return page(
+            f"Too many failed attempts. Try again in {minutes} minute(s).", 429
+        )
+
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "")
+
+    conn = get_db()
+    try:
+        admin = conn.execute(
+            "SELECT id, username, password_hash FROM admin_users WHERE username=?",
+            (username,),
+        ).fetchone()
+    finally:
+        conn.close()
+
+    stored_hash = admin["password_hash"] if admin and admin["password_hash"] else DUMMY_HASH
+    password_ok = check_password_hash(stored_hash, password)
+
+    if admin is None or not password_ok:
+        record_failed_login(ip)
+        return page("Invalid username or password.", 401)
+
+    clear_failed_logins(ip)
+    session.clear()  # new session on login
+    session.permanent = True
+    session["admin_id"] = admin["id"]
+    session["pwv"] = _password_fingerprint(admin["password_hash"])
+    return redirect(next_url)
+
+
+@app.route("/logout", methods=["POST"])
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+
+# ---------------------------------------------------------------------------
 # Time formatting
+# ---------------------------------------------------------------------------
 def format_working_time(minutes):
     if minutes is None:
         return "-"
@@ -413,6 +678,14 @@ def export_csv():
 
 if __name__ == "__main__":
     print(f"BCREC Attendance Dashboard: http://{APP_HOST}:{APP_PORT}")
+    if not admin_exists():
+        print("WARNING: no admin account exists yet. Run: python create_admin.py")
+    if APP_HOST not in ("127.0.0.1", "localhost", "::1") and not COOKIE_SECURE:
+        print(
+            "NOTE: the dashboard is reachable over the network on plain HTTP. "
+            "Passwords are not encrypted in transit; put it behind HTTPS "
+            "(then set ATTENDANCE_COOKIE_SECURE=1) or keep it on a trusted network."
+        )
     app.run(
         host=APP_HOST,
         port=APP_PORT,

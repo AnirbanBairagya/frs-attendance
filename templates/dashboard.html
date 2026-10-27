@@ -1,33 +1,206 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BCREC Faculty Attendance</title>
-<style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#172033}.header{background:#17283b;color:#fff;padding:22px 30px}.header h1{margin:0}.header p{margin:7px 0 0;color:#d7dee8}.nav{background:#fff;padding:12px 30px;box-shadow:0 2px 8px rgba(0,0,0,.06)}.nav a{margin-right:18px;color:#1d4ed8;text-decoration:none;font-weight:600}.container{max-width:1200px;margin:28px auto;padding:0 20px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.card{background:#fff;border-radius:10px;padding:22px;box-shadow:0 3px 12px rgba(0,0,0,.08)}.label{font-size:14px;color:#6b7280}.value{font-size:32px;font-weight:700;margin-top:8px}.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px}.action{background:#fff;padding:22px;border-radius:10px;box-shadow:0 3px 12px rgba(0,0,0,.08);text-decoration:none;color:#172033}.action h3{margin:0 0 8px}.action p{margin:0;color:#6b7280}@media(max-width:800px){.stats,.actions{grid-template-columns:1fr 1fr}}@media(max-width:520px){.stats,.actions{grid-template-columns:1fr}.nav{padding:12px 18px}.header{padding:20px}}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BCREC Faculty Attendance</title>
+    <style>
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #172033
+        }
+
+        .header {
+            background: #17283b;
+            color: #fff;
+            padding: 22px 30px
+        }
+
+        .header h1 {
+            margin: 0
+        }
+
+        .header p {
+            margin: 7px 0 0;
+            color: #d7dee8
+        }
+
+        .nav {
+            background: #fff;
+            padding: 12px 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .06)
+        }
+
+        .nav a {
+            margin-right: 18px;
+            color: #1d4ed8;
+            text-decoration: none;
+            font-weight: 600
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 28px auto;
+            padding: 0 20px
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 22px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, .08)
+        }
+
+        .label {
+            font-size: 14px;
+            color: #6b7280
+        }
+
+        .value {
+            font-size: 32px;
+            font-weight: 700;
+            margin-top: 8px
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-top: 22px
+        }
+
+        .action {
+            background: #fff;
+            padding: 22px;
+            border-radius: 10px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, .08);
+            text-decoration: none;
+            color: #172033
+        }
+
+        .action h3 {
+            margin: 0 0 8px
+        }
+
+        .action p {
+            margin: 0;
+            color: #6b7280
+        }
+
+        @media(max-width:800px) {
+
+            .stats,
+            .actions {
+                grid-template-columns: 1fr 1fr
+            }
+        }
+
+        @media(max-width:520px) {
+
+            .stats,
+            .actions {
+                grid-template-columns: 1fr
+            }
+
+            .nav {
+                padding: 12px 18px
+            }
+
+            .header {
+                padding: 20px
+            }
+        }
+
+        .nav {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap
+        }
+
+        .nav .logout {
+            margin: 0 0 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 10px
+        }
+
+        .nav .logout .who {
+            color: #6b7280;
+            font-size: 14px
+        }
+
+        .nav .logout button {
+            background: #fff;
+            color: #172033;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-weight: 600;
+            cursor: pointer
+        }
+    </style>
 </head>
+
 <body>
-<div class="header"><h1>BCREC Faculty Attendance System</h1><p>Lightweight face-recognition attendance dashboard</p></div>
-<div class="nav">
-<a href="{{ url_for('dashboard') }}">Dashboard</a>
-<a href="{{ url_for('faculty') }}">Faculty Management</a>
-<a href="{{ url_for('attendance') }}">Today's Attendance</a>
-<a href="{{ url_for('reports') }}">Monthly Reports</a>
-</div>
-<div class="container">
-<div class="stats">
-<div class="card"><div class="label">Total Faculty</div><div class="value">{{ total_faculty }}</div></div>
-<div class="card"><div class="label">Present Today</div><div class="value">{{ present_today }}</div></div>
-<div class="card"><div class="label">Late Today</div><div class="value">{{ late_today }}</div></div>
-<div class="card"><div class="label">Absent Today</div><div class="value">{{ absent_today }}</div></div>
-</div>
-<div class="actions">
-<a class="action" href="{{ url_for('faculty') }}"><h3>Faculty Management</h3><p>View and register faculty members.</p></a>
-<a class="action" href="{{ url_for('attendance') }}"><h3>Today's Attendance</h3><p>View check-in, check-out and late status.</p></a>
-<a class="action" href="{{ url_for('reports') }}"><h3>Monthly Reports</h3><p>Generate department-filtered attendance reports and CSV exports.</p></a>
-</div>
-</div>
+    <div class="header">
+        <h1>BCREC Faculty Attendance System</h1>
+        <p>Lightweight face-recognition attendance dashboard</p>
+    </div>
+    <div class="nav">
+        <a href="{{ url_for('dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('faculty') }}">Faculty Management</a>
+        <a href="{{ url_for('attendance') }}">Today's Attendance</a>
+        <a href="{{ url_for('reports') }}">Monthly Reports</a>
+        <form class="logout" method="post" action="{{ url_for('logout') }}"><span class="who">{{ admin_username
+                }}</span><button type="submit">Log out</button></form>
+    </div>
+    <div class="container">
+        <div class="stats">
+            <div class="card">
+                <div class="label">Total Faculty</div>
+                <div class="value">{{ total_faculty }}</div>
+            </div>
+            <div class="card">
+                <div class="label">Present Today</div>
+                <div class="value">{{ present_today }}</div>
+            </div>
+            <div class="card">
+                <div class="label">Late Today</div>
+                <div class="value">{{ late_today }}</div>
+            </div>
+            <div class="card">
+                <div class="label">Absent Today</div>
+                <div class="value">{{ absent_today }}</div>
+            </div>
+        </div>
+        <div class="actions">
+            <a class="action" href="{{ url_for('faculty') }}">
+                <h3>Faculty Management</h3>
+                <p>View and register faculty members.</p>
+            </a>
+            <a class="action" href="{{ url_for('attendance') }}">
+                <h3>Today's Attendance</h3>
+                <p>View check-in, check-out and late status.</p>
+            </a>
+            <a class="action" href="{{ url_for('reports') }}">
+                <h3>Monthly Reports</h3>
+                <p>Generate department-filtered attendance reports and CSV exports.</p>
+            </a>
+        </div>
+    </div>
 </body>
+
 </html>

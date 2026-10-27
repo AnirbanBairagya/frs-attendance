@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - BCREC Faculty Attendance</title>
+    <style>
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #172033
+        }
+
+        .header {
+            background: #17283b;
+            color: #fff;
+            padding: 22px 30px
+        }
+
+        .header h1 {
+            margin: 0
+        }
+
+        .header p {
+            margin: 7px 0 0;
+            color: #d7dee8
+        }
+
+        .container {
+            max-width: 420px;
+            margin: 40px auto;
+            padding: 0 20px
+        }
+
+        .panel {
+            background: #fff;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, .08)
+        }
+
+        .panel h2 {
+            margin: 0 0 4px
+        }
+
+        .sub {
+            margin: 0 0 12px;
+            color: #6b7280
+        }
+
+        label {
+            display: block;
+            font-weight: 700;
+            margin: 14px 0 6px
+        }
+
+        input {
+            width: 100%;
+            height: 42px;
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 15px
+        }
+
+        .button {
+            width: 100%;
+            margin-top: 22px;
+            background: #2563eb;
+            color: #fff;
+            border: 0;
+            padding: 12px 18px;
+            border-radius: 7px;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer
+        }
+
+        .error {
+            background: #fef2f2;
+            border: 1px solid #fca5a5;
+            color: #991b1b;
+            padding: 12px;
+            border-radius: 7px;
+            margin: 14px 0 4px
+        }
+
+        .note {
+            background: #eff6ff;
+            border: 1px solid #93c5fd;
+            color: #1e3a8a;
+            padding: 12px;
+            border-radius: 7px;
+            margin: 14px 0 4px;
+            line-height: 1.5
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>BCREC Faculty Attendance System</h1>
+        <p>Lightweight face-recognition attendance dashboard</p>
+    </div>
+    <div class="container">
+        <div class="panel">
+            <h2>Admin Login</h2>
+            <p class="sub">Sign in to manage faculty and view attendance.</p>
+
+            {% if no_admin %}<div class="note">No admin account exists yet. On the attendance machine run
+                <code>python create_admin.py</code>, then sign in here.
+            </div>{% endif %}
+            {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
+
+            <form method="post" action="{{ url_for('login') }}">
+                <input type="hidden" name="next" value="{{ next_url }}">
+                <label for="username">Username</label>
+                <input id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false"
+                    required autofocus>
+                <label for="password">Password</label>
+                <input id="password" type="password" name="password" autocomplete="current-password" required>
+                <button class="button" type="submit">Sign In</button>
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>

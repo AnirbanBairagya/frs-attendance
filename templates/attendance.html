@@ -1,24 +1,203 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Today's Attendance</title>
-<style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#172033}.header{background:#17283b;color:#fff;padding:22px 30px}.nav{background:#fff;padding:12px 30px;box-shadow:0 2px 8px rgba(0,0,0,.06)}.nav a{margin-right:18px;color:#1d4ed8;text-decoration:none;font-weight:600}.container{max-width:1250px;margin:28px auto;padding:0 20px}.toolbar{display:flex;gap:12px;align-items:end;flex-wrap:wrap;background:#fff;padding:18px;border-radius:10px;box-shadow:0 3px 12px rgba(0,0,0,.08);margin-bottom:20px}label{font-weight:700;font-size:14px}.dateinput{height:42px;padding:8px 12px;border:1px solid #cbd5e1;border-radius:6px}.button{height:42px;padding:0 18px;border:0;border-radius:6px;background:#2563eb;color:#fff;font-weight:700}.table-wrap{background:#fff;border-radius:10px;overflow:auto;box-shadow:0 3px 12px rgba(0,0,0,.08)}table{width:100%;border-collapse:collapse;min-width:900px}th,td{padding:13px;border-bottom:1px solid #eee;text-align:left}th{background:#f8fafc}.late{color:#d97706;font-weight:700}.present{color:#15803d;font-weight:700}.open{color:#2563eb;font-weight:700}.back{display:inline-block;margin-top:22px;color:#1d4ed8;text-decoration:none}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Today's Attendance</title>
+    <style>
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #172033
+        }
+
+        .header {
+            background: #17283b;
+            color: #fff;
+            padding: 22px 30px
+        }
+
+        .nav {
+            background: #fff;
+            padding: 12px 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .06)
+        }
+
+        .nav a {
+            margin-right: 18px;
+            color: #1d4ed8;
+            text-decoration: none;
+            font-weight: 600
+        }
+
+        .container {
+            max-width: 1250px;
+            margin: 28px auto;
+            padding: 0 20px
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            align-items: end;
+            flex-wrap: wrap;
+            background: #fff;
+            padding: 18px;
+            border-radius: 10px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, .08);
+            margin-bottom: 20px
+        }
+
+        label {
+            font-weight: 700;
+            font-size: 14px
+        }
+
+        .dateinput {
+            height: 42px;
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px
+        }
+
+        .button {
+            height: 42px;
+            padding: 0 18px;
+            border: 0;
+            border-radius: 6px;
+            background: #2563eb;
+            color: #fff;
+            font-weight: 700
+        }
+
+        .table-wrap {
+            background: #fff;
+            border-radius: 10px;
+            overflow: auto;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, .08)
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 900px
+        }
+
+        th,
+        td {
+            padding: 13px;
+            border-bottom: 1px solid #eee;
+            text-align: left
+        }
+
+        th {
+            background: #f8fafc
+        }
+
+        .late {
+            color: #d97706;
+            font-weight: 700
+        }
+
+        .present {
+            color: #15803d;
+            font-weight: 700
+        }
+
+        .open {
+            color: #2563eb;
+            font-weight: 700
+        }
+
+        .back {
+            display: inline-block;
+            margin-top: 22px;
+            color: #1d4ed8;
+            text-decoration: none
+        }
+
+        .nav {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap
+        }
+
+        .nav .logout {
+            margin: 0 0 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 10px
+        }
+
+        .nav .logout .who {
+            color: #6b7280;
+            font-size: 14px
+        }
+
+        .nav .logout button {
+            background: #fff;
+            color: #172033;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-weight: 600;
+            cursor: pointer
+        }
+    </style>
 </head>
+
 <body>
-<div class="header"><h1>Today's Attendance</h1></div>
-<div class="nav"><a href="{{ url_for('dashboard') }}">Dashboard</a><a href="{{ url_for('faculty') }}">Faculty</a><a href="{{ url_for('attendance') }}">Attendance</a><a href="{{ url_for('reports') }}">Reports</a></div>
-<div class="container">
-<form class="toolbar" method="get" action="{{ url_for('attendance') }}"><div><label for="date">Date</label><br><input class="dateinput" id="date" type="date" name="date" value="{{ selected_date }}"></div><button class="button" type="submit">VIEW</button></form>
-{% if records %}<div class="table-wrap"><table><thead><tr><th>Faculty ID</th><th>Name</th><th>Department</th><th>IN</th><th>OUT</th><th>Status</th><th>Working Time</th></tr></thead><tbody>
-{% for row in records %}<tr>
-<td>{{ row.faculty_id }}</td><td>{{ row.name }}</td><td>{{ row.department or '-' }}</td><td>{{ row.check_in_time or '-' }}</td><td>{{ row.check_out_time or '-' }}</td>
-<td>{% if row.late %}<span class="late">Late</span>{% elif row.check_in_time and not row.check_out_time %}<span class="open">Open</span>{% elif row.check_in_time %}<span class="present">Present</span>{% else %}-{% endif %}</td>
-<td>{{ row.working_time }}</td>
-</tr>{% endfor %}
-</tbody></table></div>{% else %}<div class="table-wrap"><p style="padding:20px">No attendance records for {{ selected_date }}.</p></div>{% endif %}
-<a class="back" href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
-</div>
-</body></html>
+    <div class="header">
+        <h1>Today's Attendance</h1>
+    </div>
+    <div class="nav"><a href="{{ url_for('dashboard') }}">Dashboard</a><a href="{{ url_for('faculty') }}">Faculty</a><a
+            href="{{ url_for('attendance') }}">Attendance</a><a href="{{ url_for('reports') }}">Reports</a>
+        <form class="logout" method="post" action="{{ url_for('logout') }}"><span class="who">{{ admin_username
+                }}</span><button type="submit">Log out</button></form>
+    </div>
+    <div class="container">
+        <form class="toolbar" method="get" action="{{ url_for('attendance') }}">
+            <div><label for="date">Date</label><br><input class="dateinput" id="date" type="date" name="date"
+                    value="{{ selected_date }}"></div><button class="button" type="submit">VIEW</button>
+        </form>
+        {% if records %}<div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Faculty ID</th>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th>IN</th>
+                        <th>OUT</th>
+                        <th>Status</th>
+                        <th>Working Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in records %}<tr>
+                        <td>{{ row.faculty_id }}</td>
+                        <td>{{ row.name }}</td>
+                        <td>{{ row.department or '-' }}</td>
+                        <td>{{ row.check_in_time or '-' }}</td>
+                        <td>{{ row.check_out_time or '-' }}</td>
+                        <td>{% if row.late %}<span class="late">Late</span>{% elif row.check_in_time and not
+                            row.check_out_time %}<span class="open">Open</span>{% elif row.check_in_time %}<span
+                                class="present">Present</span>{% else %}-{% endif %}</td>
+                        <td>{{ row.working_time }}</td>
+                    </tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>{% else %}<div class="table-wrap">
+            <p style="padding:20px">No attendance records for {{ selected_date }}.</p>
+        </div>{% endif %}
+        <a class="back" href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
+    </div>
+</body>
+
+</html>
