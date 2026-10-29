@@ -1,9 +1,12 @@
+# Editor
 __pycache__/
 *.pyc
 
+# Data
 *.db
 *.pkl
 
+# Admin
 known_faces/
 .registration
 .secret_key
@@ -13,8 +16,10 @@ known_faces/
 venv/
 env/
 
+# Environment
 *.log
 .env
 
+# Kiosk settings
 .kiosk_state.json
 kiosk_config.json
