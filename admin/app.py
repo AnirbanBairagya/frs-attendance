@@ -15,10 +15,10 @@ import hashlib
 import hmac
 import io
 import os
+import json
 import secrets
+import socket
 import sqlite3
-import subprocess
-import sys
 import threading
 import time
 from datetime import date, datetime, timedelta
@@ -27,18 +27,26 @@ from urllib.parse import urlparse
 from flask import (
     Flask,
     Response,
+    abort,
+    flash,
     g,
+    jsonify,
     redirect,
     render_template,
     request,
+    send_file,
     session,
     url_for,
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from lite_core import BASE_DIR, DB_PATH, ensure_db
+from . import kiosk_api
+from . import registration
+import common.kiosk_proto as kiosk_proto
+from common.lite_core import COMMON_DIR, DB_PATH, ensure_db
 
-APP_HOST = os.environ.get("ATTENDANCE_HOST", "127.0.0.1")
+# 0.0.0.0 so kiosks on the LAN can sync. The dashboard itself is login-protected.
+APP_HOST = os.environ.get("ATTENDANCE_HOST", "0.0.0.0")
 APP_PORT = int(os.environ.get("ATTENDANCE_PORT", "5000"))
 APP_DEBUG = os.environ.get("ATTENDANCE_DEBUG", "0") == "1"
 
@@ -61,7 +69,7 @@ def load_secret_key():
     if env_key:
         return env_key
 
-    path = os.path.join(BASE_DIR, ".secret_key")
+    path = os.path.join(COMMON_DIR, ".secret_key")
     try:
         with open(path, "r", encoding="utf-8") as f:
             key = f.read().strip()
@@ -91,6 +99,12 @@ app.config.update(
     PERMANENT_SESSION_LIFETIME=timedelta(hours=SESSION_HOURS),
 )
 ensure_db()
+kiosk_api.ensure_tables()
+app.register_blueprint(kiosk_api.bp)
+try:
+    registration.recover_on_startup()  # settle any half-finished registration
+except Exception as exc:  # noqa: BLE001 - never stop the dashboard from starting
+    print(f"[registration] startup recovery skipped: {exc}")
 
 
 # Database helper
@@ -208,7 +222,8 @@ def require_login():
     if request.method == "POST" and not same_origin():
         return Response("Cross-site request blocked.", status=403)
 
-    if request.endpoint in PUBLIC_ENDPOINTS:
+    # Kiosk sync calls are authenticated by their own signature (kiosk_api.py).
+    if request.endpoint in PUBLIC_ENDPOINTS or request.blueprint == "kiosk_api":
         return None
 
     if current_admin() is None:
@@ -400,78 +415,198 @@ def faculty():
     return render_template("faculty.html", faculty_list=faculty_list)
 
 
+# ---------------------------------------------------------------------------
+# Faculty registration: details -> camera capture -> train -> submit.
+# The long-running steps live in registration.py; these routes only start,
+# poll and close them, so the browser never waits on the camera or training.
+# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Kiosks (Raspberry Pi devices linked to this admin PC)
+# ---------------------------------------------------------------------------
+def lan_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("10.255.255.255", 1))  # no packet is sent; just picks the LAN interface
+        return s.getsockname()[0]
+    except OSError:
+        return "127.0.0.1"
+    finally:
+        s.close()
+
+
+def public_url():
+    return (os.environ.get("ATTENDANCE_PUBLIC_URL") or f"http://{lan_ip()}:{APP_PORT}").rstrip("/")
+
+
+def ago_text(seconds):
+    if seconds is None:
+        return "never"
+    if seconds < 60:
+        return f"{seconds} s ago"
+    if seconds < 3600:
+        return f"{seconds // 60} min ago"
+    if seconds < 86400:
+        return f"{seconds // 3600} h ago"
+    return f"{seconds // 86400} d ago"
+
+
+def kiosk_note():
+    """One line for the registration page: have the kiosks picked up the new face data?"""
+    try:
+        items = kiosk_api.overview()
+    except Exception:  # noqa: BLE001 - purely informational
+        return ""
+    if not items:
+        return "No kiosk is linked to this admin PC yet - add one on the Kiosks page."
+    ready = [k for k in items if k["synced"]]
+    note = f"Kiosks up to date: {len(ready)} of {len(items)}."
+    waiting = [f"{k['name']} ({'updating' if k['online'] else 'offline'})" for k in items if not k["synced"]]
+    if waiting:
+        note += " Waiting for: " + ", ".join(waiting) + ". Offline kiosks catch up when they reconnect."
+    return note
+
+
+def _kiosk_page(new=None, error=None, status=200):
+    items = kiosk_api.overview()
+    for k in items:
+        k["seen_text"] = ago_text(k["last_seen_ago"])
+    state = kiosk_api.current_state()["classifier"]
+    return render_template(
+        "kiosks.html", kiosks=items, new=new, error=error, admin_url=public_url(), port=APP_PORT,
+        versions={"sklearn": state["sklearn"] or "?", "opencv": state["opencv"]},
+    ), status
+
+
+def _new_key_view(info):
+    config = {"admin_url": public_url(), "kiosk_id": info["kiosk_id"], "secret": info["secret"], "poll_seconds": 5}
+    return {"name": info["name"], "config": json.dumps(config, indent=2)}
+
+
+@app.route("/kiosks")
+def kiosks():
+    return _kiosk_page()
+
+
+@app.route("/kiosks/status")
+def kiosks_status():
+    return jsonify(kiosk_api.overview())
+
+
+@app.route("/kiosks/add", methods=["POST"])
+def kiosk_add():
+    try:
+        info = kiosk_api.create_kiosk(request.form.get("name", ""))
+    except ValueError as exc:
+        return _kiosk_page(error=str(exc), status=400)
+    return _kiosk_page(new=_new_key_view(info))
+
+
+@app.route("/kiosks/<kiosk_id>/regenerate", methods=["POST"])
+def kiosk_regenerate(kiosk_id):
+    info = kiosk_api.regenerate_secret(kiosk_id) if kiosk_proto.KIOSK_ID_RE.match(kiosk_id) else None
+    if info is None:
+        flash("That kiosk no longer exists.")
+        return redirect(url_for("kiosks"))
+    return _kiosk_page(new=_new_key_view(info))
+
+
+@app.route("/kiosks/<kiosk_id>/remove", methods=["POST"])
+def kiosk_remove(kiosk_id):
+    if kiosk_proto.KIOSK_ID_RE.match(kiosk_id) and kiosk_api.remove_kiosk(kiosk_id):
+        flash("Kiosk removed. It will stop syncing.")
+    else:
+        flash("That kiosk no longer exists.")
+    return redirect(url_for("kiosks"))
+
+
+def _job_redirect(job_id):
+    return redirect(url_for("registration_job", job_id=job_id))
+
+
 @app.route("/faculty/register", methods=["GET", "POST"])
 def register_faculty():
+    active = registration.get_active_job()
+    if active:  # one registration at a time; resume it instead of starting another
+        return _job_redirect(active["id"])
+
     if request.method == "GET":
-        return render_template("register_faculty.html", message=None, error=None)
+        retry = registration.get_job(request.args.get("retry", ""))
+        form = retry.get("faculty", {}) if retry else {}
+        return render_template("register_faculty.html", message=None, error=None, form=form)
 
-    faculty_id = request.form.get("faculty_id", "").strip()
-    name = request.form.get("name", "").strip()
-    department = request.form.get("department", "").strip()
-    designation = request.form.get("designation", "").strip()
-    email = request.form.get("email", "").strip()
-    phone = request.form.get("phone", "").strip()
-
-    if not faculty_id or not name:
-        return render_template(
-            "register_faculty.html",
-            message=None,
-            error="Faculty ID and Name are required.",
-        )
-
-    conn = get_db()
-    try:
-        existing = conn.execute(
-            "SELECT id FROM faculty WHERE faculty_id=?",
-            (faculty_id,),
-        ).fetchone()
-    finally:
-        conn.close()
-
-    if existing:
-        return render_template(
-            "register_faculty.html",
-            message=None,
-            error=f"Faculty ID {faculty_id} already exists.",
-        )
-
-    # Do NOT capture camera frames inside Flask. Launch the native enrollment
-    # window on the Pi/Windows machine where the camera and display are.
-    enroll_path = os.path.join(BASE_DIR, "enroll.py")
-    command = [
-        sys.executable,
-        enroll_path,
-        "--id",
-        faculty_id,
-        "--name",
-        name,
-        "--dept",
-        department,
-        "--designation",
-        designation,
-        "--email",
-        email,
-        "--phone",
-        phone,
-    ]
+    clean, error = registration.validate_faculty_fields(request.form)
+    if error:
+        return render_template("register_faculty.html", message=None, error=error, form=clean)
 
     try:
-        subprocess.Popen(command, cwd=BASE_DIR)
-    except Exception as exc:
-        return render_template(
-            "register_faculty.html",
-            message=None,
-            error=f"Could not start native enrollment: {exc}",
-        )
+        job = registration.start_job(clean)
+    except registration.JobBusy as exc:
+        return _job_redirect(exc.job["id"])
+    except registration.RegistrationError as exc:
+        return render_template("register_faculty.html", message=None, error=str(exc), form=clean)
+    return _job_redirect(job["id"])
 
+
+@app.route("/faculty/register/<job_id>")
+def registration_job(job_id):
+    job = registration.get_job(job_id)
+    if job is None:
+        return redirect(url_for("register_faculty"))
     return render_template(
-        "register_faculty.html",
-        message=(
-            "Enrollment window started. Complete the 3 camera captures on the "
-            "attendance machine. After successful enrollment, run train_lite.py."
-        ),
-        error=None,
+        "register_job.html",
+        job=job,
+        kiosk_note=kiosk_note(),
+        elapsed=registration.elapsed(job),
+        expected_photos=registration.EXPECTED_PHOTOS,
     )
+
+
+@app.route("/faculty/register/<job_id>/status")
+def registration_status(job_id):
+    job = registration.get_job(job_id)
+    if job is None:
+        return jsonify({"state": "missing"}), 404
+    data = registration.public_status(job)
+    data["kiosk_note"] = kiosk_note()
+    return jsonify(data)
+
+
+@app.route("/faculty/register/<job_id>/photo/<int:n>")
+def registration_photo(job_id, n):
+    path = registration.staged_photo_path(job_id, n)
+    if not path:
+        abort(404)
+    return send_file(path, mimetype="image/jpeg", max_age=0)
+
+
+def _run_job_action(job_id, action):
+    try:
+        action(job_id)
+    except registration.InvalidState as exc:
+        flash(str(exc))
+    return _job_redirect(job_id)
+
+
+@app.route("/faculty/register/<job_id>/train", methods=["POST"])
+def registration_train(job_id):
+    return _run_job_action(job_id, registration.request_train)
+
+
+@app.route("/faculty/register/<job_id>/submit", methods=["POST"])
+def registration_submit(job_id):
+    return _run_job_action(job_id, registration.submit_job)
+
+
+@app.route("/faculty/register/<job_id>/cancel", methods=["POST"])
+def registration_cancel(job_id):
+    try:
+        job = registration.cancel_job(job_id)
+    except registration.InvalidState as exc:
+        flash(str(exc))
+        return _job_redirect(job_id)
+    if request.form.get("retake") == "1" and job["state"] == "cancelled":
+        return redirect(url_for("register_faculty", retry=job_id))
+    return _job_redirect(job_id)
 
 
 # Daily Attendance
@@ -678,6 +813,7 @@ def export_csv():
 
 if __name__ == "__main__":
     print(f"BCREC Attendance Dashboard: http://{APP_HOST}:{APP_PORT}")
+    print(f"Kiosks sync to: {public_url()}   (link a kiosk on the dashboard's Kiosks page)")
     if not admin_exists():
         print("WARNING: no admin account exists yet. Run: python create_admin.py")
     if APP_HOST not in ("127.0.0.1", "localhost", "::1") and not COOKIE_SECURE:

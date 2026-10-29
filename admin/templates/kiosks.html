@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiosks</title>
+    <style>
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #172033
+        }
+
+        .header {
+            background: #17283b;
+            color: #fff;
+            padding: 22px 30px
+        }
+
+        .nav {
+            background: #fff;
+            padding: 12px 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap
+        }
+
+        .nav a {
+            margin-right: 18px;
+            color: #1d4ed8;
+            text-decoration: none;
+            font-weight: 600
+        }
+
+        .nav .logout {
+            margin: 0 0 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 10px
+        }
+
+        .nav .logout .who {
+            color: #6b7280;
+            font-size: 14px
+        }
+
+        .nav .logout button {
+            background: #fff;
+            color: #172033;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-weight: 600;
+            cursor: pointer
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 28px auto;
+            padding: 0 20px
+        }
+
+        .panel {
+            background: #fff;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, .08)
+        }
+
+        .who-line {
+            color: #6b7280;
+            margin: 0 0 18px
+        }
+
+        .steps {
+            display: flex;
+            gap: 8px;
+            margin: 0 0 22px;
+            padding: 0;
+            list-style: none
+        }
+
+        .steps li {
+            flex: 1;
+            text-align: center;
+            padding: 8px 4px;
+            border-radius: 7px;
+            background: #eef2f7;
+            color: #6b7280;
+            font-size: 13px;
+            font-weight: 700
+        }
+
+        .steps li.done {
+            background: #dcfce7;
+            color: #166534
+        }
+
+        .steps li.active {
+            background: #2563eb;
+            color: #fff
+        }
+
+        h2 {
+            margin: 0 0 8px
+        }
+
+        p {
+            line-height: 1.5
+        }
+
+        .button {
+            margin-top: 12px;
+            background: #2563eb;
+            color: #fff;
+            border: 0;
+            padding: 12px 18px;
+            border-radius: 7px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 15px;
+            text-decoration: none;
+            display: inline-block
+        }
+
+        .button.secondary {
+            background: #fff;
+            color: #172033;
+            border: 1px solid #cbd5e1
+        }
+
+        .button.danger {
+            background: #fff;
+            color: #b91c1c;
+            border: 1px solid #fca5a5
+        }
+
+        .button[disabled] {
+            opacity: .6;
+            cursor: default
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-top: 8px
+        }
+
+        .actions form {
+            margin: 0
+        }
+
+        .message {
+            background: #ecfdf5;
+            border: 1px solid #86efac;
+            color: #166534;
+            padding: 12px;
+            border-radius: 7px;
+            margin: 14px 0
+        }
+
+        .error {
+            background: #fef2f2;
+            border: 1px solid #fca5a5;
+            color: #991b1b;
+            padding: 12px;
+            border-radius: 7px;
+            margin: 14px 0
+        }
+
+        .note {
+            background: #eff6ff;
+            border: 1px solid #93c5fd;
+            color: #1e3a8a;
+            padding: 12px;
+            border-radius: 7px;
+            margin: 14px 0;
+            line-height: 1.5
+        }
+
+        .offline {
+            display: none;
+            background: #fffbeb;
+            border: 1px solid #fcd34d;
+            color: #92400e;
+            padding: 10px 12px;
+            border-radius: 7px;
+            margin: 14px 0
+        }
+
+        .thumbs {
+            display: flex;
+            gap: 10px;
+            margin: 14px 0
+        }
+
+        .thumbs img {
+            width: 31%;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            background: #000
+        }
+
+        .spinner {
+            width: 22px;
+            height: 22px;
+            border: 3px solid #cbd5e1;
+            border-top-color: #2563eb;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 10px
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        details {
+            margin-top: 10px;
+            color: #6b7280;
+            font-size: 13px
+        }
+
+        pre {
+            white-space: pre-wrap;
+            word-break: break-word;
+            background: #f8fafc;
+            padding: 10px;
+            border-radius: 6px
+        }
+
+        .back {
+            display: inline-block;
+            margin-top: 20px;
+            color: #1d4ed8;
+            text-decoration: none
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 10px 8px;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: top;
+            font-size: 14px
+        }
+
+        th {
+            color: #6b7280;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: .04em
+        }
+
+        .pill {
+            display: inline-block;
+            padding: 3px 9px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700
+        }
+
+        .pill.ok {
+            background: #dcfce7;
+            color: #166534
+        }
+
+        .pill.wait {
+            background: #fef3c7;
+            color: #92400e
+        }
+
+        .pill.off {
+            background: #f1f5f9;
+            color: #475569
+        }
+
+        .small {
+            color: #6b7280;
+            font-size: 13px;
+            margin: 2px 0 0
+        }
+
+        .warn {
+            color: #b45309;
+            font-size: 13px;
+            margin: 4px 0 0
+        }
+
+        input[type=text] {
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 7px;
+            font-size: 15px;
+            min-width: 240px
+        }
+
+        .inline {
+            display: inline;
+            margin: 0
+        }
+
+        .inline .button {
+            margin: 0;
+            padding: 6px 10px;
+            font-size: 13px
+        }
+
+        .panel+.panel {
+            margin-top: 18px
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1 style="margin:0">Attendance Kiosks</h1>
+        <p style="margin:4px 0 0;opacity:.85">Link a Raspberry Pi kiosk to this admin PC</p>
+    </div>
+    <div class="nav">
+        <a href="{{ url_for('dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('faculty') }}">Faculty Management</a>
+        <a href="{{ url_for('attendance') }}">Attendance</a><a href="{{ url_for('reports') }}">Reports</a><a href="{{ url_for('kiosks') }}">Kiosks</a><form class="logout" method="post" action="{{ url_for('logout') }}"><span class="who">{{ admin_username }}</span><button type="submit">Log out</button></form></div>
+    <div class="container">
+        {% for m in get_flashed_messages() %}<div class="note">{{ m }}</div>{% endfor %}
+        {% if error %}<div class="error">{{ error }}</div>{% endif %}
+
+        {% if new %}
+        <div class="panel">
+            <h2>Key for &ldquo;{{ new.name }}&rdquo;</h2>
+            <div class="note"><strong>This key is shown only once.</strong> On the Raspberry Pi, create a file named
+                <code>kiosk_config.json</code> in the same folder as <code>kiosk.py</code>, paste this into it, and restart
+                the kiosk. If you lose it, use <em>New key</em> below.</div>
+            <pre id="cfg">{{ new.config }}</pre>
+            <button class="button secondary" type="button" id="copy">Copy</button>
+            <p class="small">The Pi must be on the same Wi-Fi/LAN as this computer and be able to reach
+                <strong>{{ admin_url }}</strong>. If it cannot, allow port {{ port }} in this computer's firewall.</p>
+        </div>
+        {% endif %}
+
+        <div class="panel">
+            <h2>Linked kiosks</h2>
+            {% if kiosks %}
+            <table>
+                <tr><th>Kiosk</th><th>Status</th><th>Queued scans</th><th></th></tr>
+                {% for k in kiosks %}
+                <tr>
+                    <td><strong>{{ k.name }}</strong><p class="small">{{ k.kiosk_id }}{% if k.last_ip %} &middot; {{ k.last_ip }}{% endif %}</p></td>
+                    <td>
+                        {% if not k.last_seen %}<span class="pill off">Never connected</span>
+                        {% elif k.online and k.synced %}<span class="pill ok">Up to date</span>
+                        {% elif k.online %}<span class="pill wait">Updating&hellip;</span>
+                        {% else %}<span class="pill off">Offline</span>{% endif %}
+                        {% if k.last_seen %}<p class="small">Last contact {{ k.seen_text }}</p>{% endif %}
+                        {% if k.version_note %}<p class="warn">{{ k.version_note }}</p>{% endif %}
+                        {% if k.warning %}<p class="warn">{{ k.warning }}</p>{% endif %}
+                        {% if k.last_error %}<p class="warn">{{ k.last_error }}</p>{% endif %}
+                    </td>
+                    <td>{{ k.pending if k.pending is not none else '-' }}</td>
+                    <td>
+                        <form class="inline" method="post" action="{{ url_for('kiosk_regenerate', kiosk_id=k.kiosk_id) }}"
+                            onsubmit="return confirm('Create a new key? The kiosk stops syncing until you paste the new key into its kiosk_config.json.');">
+                            <button class="button secondary" type="submit">New key</button></form>
+                        <form class="inline" method="post" action="{{ url_for('kiosk_remove', kiosk_id=k.kiosk_id) }}"
+                            onsubmit="return confirm('Remove this kiosk? It will stop syncing. Scans it already delivered stay in the reports.');">
+                            <button class="button danger" type="submit">Remove</button></form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p>No kiosk is linked yet. Add one below.</p>
+            {% endif %}
+        </div>
+
+        <div class="panel">
+            <h2>Add a kiosk</h2>
+            <form method="post" action="{{ url_for('kiosk_add') }}">
+                <input type="text" name="name" id="kname" maxlength="60" placeholder="e.g. Main gate" required>
+                <button class="button" type="submit" style="margin:0 0 0 8px">Create key</button>
+            </form>
+            <p class="small" style="margin-top:14px">The kiosk needs the same <code>models</code> folder as this computer
+                and the same library versions: <strong>scikit-learn {{ versions.sklearn }}</strong>,
+                <strong>OpenCV {{ versions.opencv }}</strong>. It checks this itself and shows a clear message here if
+                something differs.</p>
+        </div>
+    </div>
+    <script>
+        (function () {
+            var btn = document.getElementById('copy');
+            if (btn) btn.onclick = function () {
+                try {
+                    navigator.clipboard.writeText(document.getElementById('cfg').textContent);
+                    btn.textContent = 'Copied';
+                } catch (e) {
+                    var r = document.createRange(); r.selectNodeContents(document.getElementById('cfg'));
+                    var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+                }
+            };
+            {% if not new %}
+            setInterval(function () {
+                var n = document.getElementById('kname');
+                if (document.activeElement !== n && !n.value) location.reload();
+            }, 10000);
+            {% endif %}
+        })();
+    </script>
+</body>
+
+</html>

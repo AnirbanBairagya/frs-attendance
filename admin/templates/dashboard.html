@@ -123,7 +123,7 @@
                 padding: 20px
             }
         }
-
+    
         .nav {
             display: flex;
             align-items: center;
@@ -164,9 +164,7 @@
         <a href="{{ url_for('faculty') }}">Faculty Management</a>
         <a href="{{ url_for('attendance') }}">Today's Attendance</a>
         <a href="{{ url_for('reports') }}">Monthly Reports</a>
-        <form class="logout" method="post" action="{{ url_for('logout') }}"><span class="who">{{ admin_username
-                }}</span><button type="submit">Log out</button></form>
-    </div>
+    <a href="{{ url_for('kiosks') }}">Kiosks</a><form class="logout" method="post" action="{{ url_for('logout') }}"><span class="who">{{ admin_username }}</span><button type="submit">Log out</button></form></div>
     <div class="container">
         <div class="stats">
             <div class="card">

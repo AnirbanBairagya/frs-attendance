@@ -114,8 +114,7 @@
             <p class="sub">Sign in to manage faculty and view attendance.</p>
 
             {% if no_admin %}<div class="note">No admin account exists yet. On the attendance machine run
-                <code>python create_admin.py</code>, then sign in here.
-            </div>{% endif %}
+                <code>python create_admin.py</code>, then sign in here.</div>{% endif %}
             {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
 
             <form method="post" action="{{ url_for('login') }}">

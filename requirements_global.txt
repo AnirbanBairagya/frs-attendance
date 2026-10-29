@@ -1,0 +1,5 @@
+# Admin facing modules running on their system
+opencv-python>=4.8,<6
+numpy
+scikit-learn
+Flask>=3,<4

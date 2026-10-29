@@ -14,7 +14,7 @@ import cv2
 import numpy as np
 from sklearn.svm import SVC
 
-from lite_core import CLASSIFIER_PATH, FaceEngine, largest_face, list_reference_photos
+from common.lite_core import CLASSIFIER_PATH, FaceEngine, largest_face, list_reference_photos
 
 AUG_PER_PHOTO = int(os.environ.get("AUG_PER_PHOTO", "8"))
 rng = np.random.default_rng(42)

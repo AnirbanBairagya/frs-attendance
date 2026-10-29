@@ -20,7 +20,7 @@ from datetime import datetime
 
 from werkzeug.security import generate_password_hash
 
-from lite_core import DB_PATH, ensure_db
+from common.lite_core import DB_PATH, ensure_db
 
 MIN_PASSWORD_LENGTH = 8
 USERNAME_RE = re.compile(r"^[A-Za-z0-9_.@-]{3,50}$")

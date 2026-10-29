@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Today's Attendance</title>
+    <title>Faculty Management</title>
     <style>
         * {
             box-sizing: border-box
@@ -21,6 +21,10 @@
             background: #17283b;
             color: #fff;
             padding: 22px 30px
+        }
+
+        .header h1 {
+            margin: 0
         }
 
         .nav {
@@ -42,41 +46,25 @@
             padding: 0 20px
         }
 
-        .toolbar {
+        .top {
             display: flex;
-            gap: 12px;
-            align-items: end;
-            flex-wrap: wrap;
-            background: #fff;
-            padding: 18px;
-            border-radius: 10px;
-            box-shadow: 0 3px 12px rgba(0, 0, 0, .08);
-            margin-bottom: 20px
-        }
-
-        label {
-            font-weight: 700;
-            font-size: 14px
-        }
-
-        .dateinput {
-            height: 42px;
-            padding: 8px 12px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap
         }
 
         .button {
-            height: 42px;
-            padding: 0 18px;
-            border: 0;
-            border-radius: 6px;
             background: #2563eb;
             color: #fff;
+            text-decoration: none;
+            padding: 11px 18px;
+            border-radius: 7px;
             font-weight: 700
         }
 
         .table-wrap {
+            margin-top: 22px;
             background: #fff;
             border-radius: 10px;
             overflow: auto;
@@ -86,7 +74,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 900px
+            min-width: 850px
         }
 
         th,
@@ -100,18 +88,13 @@
             background: #f8fafc
         }
 
-        .late {
-            color: #d97706;
-            font-weight: 700
-        }
-
-        .present {
+        .active {
             color: #15803d;
             font-weight: 700
         }
 
-        .open {
-            color: #2563eb;
+        .inactive {
+            color: #dc2626;
             font-weight: 700
         }
 
@@ -121,7 +104,7 @@
             color: #1d4ed8;
             text-decoration: none
         }
-
+    
         .nav {
             display: flex;
             align-items: center;
@@ -154,48 +137,43 @@
 
 <body>
     <div class="header">
-        <h1>Today's Attendance</h1>
+        <h1>Faculty Management</h1>
     </div>
     <div class="nav"><a href="{{ url_for('dashboard') }}">Dashboard</a><a href="{{ url_for('faculty') }}">Faculty</a><a
-            href="{{ url_for('attendance') }}">Attendance</a><a href="{{ url_for('reports') }}">Reports</a>
-        <form class="logout" method="post" action="{{ url_for('logout') }}"><span class="who">{{ admin_username
-                }}</span><button type="submit">Log out</button></form>
-    </div>
+            href="{{ url_for('attendance') }}">Attendance</a><a href="{{ url_for('reports') }}">Reports</a><a href="{{ url_for('kiosks') }}">Kiosks</a><form class="logout" method="post" action="{{ url_for('logout') }}"><span class="who">{{ admin_username }}</span><button type="submit">Log out</button></form></div>
     <div class="container">
-        <form class="toolbar" method="get" action="{{ url_for('attendance') }}">
-            <div><label for="date">Date</label><br><input class="dateinput" id="date" type="date" name="date"
-                    value="{{ selected_date }}"></div><button class="button" type="submit">VIEW</button>
-        </form>
-        {% if records %}<div class="table-wrap">
+        <div class="top">
+            <h2>Registered Faculty</h2><a class="button" href="{{ url_for('register_faculty') }}">+ Register Faculty</a>
+        </div>
+        {% if faculty_list %}
+        <div class="table-wrap">
             <table>
                 <thead>
                     <tr>
                         <th>Faculty ID</th>
                         <th>Name</th>
                         <th>Department</th>
-                        <th>IN</th>
-                        <th>OUT</th>
+                        <th>Designation</th>
+                        <th>Email</th>
+                        <th>Phone</th>
                         <th>Status</th>
-                        <th>Working Time</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for row in records %}<tr>
-                        <td>{{ row.faculty_id }}</td>
-                        <td>{{ row.name }}</td>
-                        <td>{{ row.department or '-' }}</td>
-                        <td>{{ row.check_in_time or '-' }}</td>
-                        <td>{{ row.check_out_time or '-' }}</td>
-                        <td>{% if row.late %}<span class="late">Late</span>{% elif row.check_in_time and not
-                            row.check_out_time %}<span class="open">Open</span>{% elif row.check_in_time %}<span
-                                class="present">Present</span>{% else %}-{% endif %}</td>
-                        <td>{{ row.working_time }}</td>
+                    {% for faculty in faculty_list %}<tr>
+                        <td>{{ faculty.faculty_id }}</td>
+                        <td>{{ faculty.name }}</td>
+                        <td>{{ faculty.department or '-' }}</td>
+                        <td>{{ faculty.designation or '-' }}</td>
+                        <td>{{ faculty.email or '-' }}</td>
+                        <td>{{ faculty.phone or '-' }}</td>
+                        <td>{% if faculty.active %}<span class="active">Active</span>{% else %}<span
+                                class="inactive">Inactive</span>{% endif %}</td>
                     </tr>{% endfor %}
                 </tbody>
             </table>
-        </div>{% else %}<div class="table-wrap">
-            <p style="padding:20px">No attendance records for {{ selected_date }}.</p>
-        </div>{% endif %}
+        </div>
+        {% else %}<p>No faculty registered.</p>{% endif %}
         <a class="back" href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
     </div>
 </body>

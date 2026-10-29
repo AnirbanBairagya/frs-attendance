@@ -1,9 +1,13 @@
 __pycache__/
 *.pyc
 
-attendance.db
+*.db
+*.pkl
 
 known_faces/
+.registration
+.secret_key
+.enrollment_active
 
 .venv/
 venv/
@@ -12,4 +16,5 @@ env/
 *.log
 .env
 
-.secret_key
+.kiosk_state.json
+kiosk_config.json

@@ -25,11 +25,13 @@ import numpy as np
 # ---------------------------------------------------------------------------
 # Paths: always relative to this file, not to the process working directory.
 # ---------------------------------------------------------------------------
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODELS_DIR = os.path.join(BASE_DIR, "models")
-KNOWN_FACES_DIR = os.path.join(BASE_DIR, "known_faces")
-DB_PATH = os.path.join(BASE_DIR, "attendance.db")
-CLASSIFIER_PATH = os.path.join(BASE_DIR, "face_classifier_lite.pkl")
+COMMON_DIR = os.path.dirname(os.path.abspath(__file__))
+ADMIN_DIR = os.path.join(os.path.dirname(COMMON_DIR), "admin")
+KIOSK_DIR = os.path.join(os.path.dirname(COMMON_DIR), "kiosk")
+MODELS_DIR = os.path.join(COMMON_DIR, "models")
+KNOWN_FACES_DIR = os.path.join(ADMIN_DIR, "known_faces")
+DB_PATH = os.path.join(COMMON_DIR, "attendance.db")
+CLASSIFIER_PATH = os.path.join(COMMON_DIR, "face_classifier_lite.pkl")
 
 YUNET_PATH = os.path.join(MODELS_DIR, "face_detection_yunet_2023mar.onnx")
 SFACE_PATH = os.path.join(MODELS_DIR, "face_recognition_sface_2021dec.onnx")
@@ -477,7 +479,7 @@ def _is_late(time_str):
     return time_str > COLLEGE_START_TIME
 
 
-def mark_attendance(faculty_pk):
+def mark_attendance(faculty_pk, now=None):
     """
     Attendance state machine:
       - first scan of the day -> CHECK-IN
@@ -486,8 +488,11 @@ def mark_attendance(faculty_pk):
       - repeated scan inside cooldown -> Already recorded
 
     The first daily check-in is the one that determines Late/Present status.
+
+    `now` lets the admin PC replay a scan that a kiosk recorded earlier (for
+    example while the network was down) at the time it really happened.
     """
-    now = datetime.now()
+    now = now or datetime.now()
     today = now.strftime("%Y-%m-%d")
     t = now.strftime("%H:%M:%S")
 

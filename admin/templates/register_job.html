@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register Faculty</title>
+    <style>
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #172033
+        }
+
+        .header {
+            background: #17283b;
+            color: #fff;
+            padding: 22px 30px
+        }
+
+        .nav {
+            background: #fff;
+            padding: 12px 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap
+        }
+
+        .nav a {
+            margin-right: 18px;
+            color: #1d4ed8;
+            text-decoration: none;
+            font-weight: 600
+        }
+
+        .nav .logout {
+            margin: 0 0 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 10px
+        }
+
+        .nav .logout .who {
+            color: #6b7280;
+            font-size: 14px
+        }
+
+        .nav .logout button {
+            background: #fff;
+            color: #172033;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-weight: 600;
+            cursor: pointer
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 28px auto;
+            padding: 0 20px
+        }
+
+        .panel {
+            background: #fff;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, .08)
+        }
+
+        .who-line {
+            color: #6b7280;
+            margin: 0 0 18px
+        }
+
+        .steps {
+            display: flex;
+            gap: 8px;
+            margin: 0 0 22px;
+            padding: 0;
+            list-style: none
+        }
+
+        .steps li {
+            flex: 1;
+            text-align: center;
+            padding: 8px 4px;
+            border-radius: 7px;
+            background: #eef2f7;
+            color: #6b7280;
+            font-size: 13px;
+            font-weight: 700
+        }
+
+        .steps li.done {
+            background: #dcfce7;
+            color: #166534
+        }
+
+        .steps li.active {
+            background: #2563eb;
+            color: #fff
+        }
+
+        h2 {
+            margin: 0 0 8px
+        }
+
+        p {
+            line-height: 1.5
+        }
+
+        .button {
+            margin-top: 12px;
+            background: #2563eb;
+            color: #fff;
+            border: 0;
+            padding: 12px 18px;
+            border-radius: 7px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 15px;
+            text-decoration: none;
+            display: inline-block
+        }
+
+        .button.secondary {
+            background: #fff;
+            color: #172033;
+            border: 1px solid #cbd5e1
+        }
+
+        .button.danger {
+            background: #fff;
+            color: #b91c1c;
+            border: 1px solid #fca5a5
+        }
+
+        .button[disabled] {
+            opacity: .6;
+            cursor: default
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-top: 8px
+        }
+
+        .actions form {
+            margin: 0
+        }
+
+        .message {
+            background: #ecfdf5;
+            border: 1px solid #86efac;
+            color: #166534;
+            padding: 12px;
+            border-radius: 7px;
+            margin: 14px 0
+        }
+
+        .error {
+            background: #fef2f2;
+            border: 1px solid #fca5a5;
+            color: #991b1b;
+            padding: 12px;
+            border-radius: 7px;
+            margin: 14px 0
+        }
+
+        .note {
+            background: #eff6ff;
+            border: 1px solid #93c5fd;
+            color: #1e3a8a;
+            padding: 12px;
+            border-radius: 7px;
+            margin: 14px 0;
+            line-height: 1.5
+        }
+
+        .offline {
+            display: none;
+            background: #fffbeb;
+            border: 1px solid #fcd34d;
+            color: #92400e;
+            padding: 10px 12px;
+            border-radius: 7px;
+            margin: 14px 0
+        }
+
+        .thumbs {
+            display: flex;
+            gap: 10px;
+            margin: 14px 0
+        }
+
+        .thumbs img {
+            width: 31%;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            background: #000
+        }
+
+        .spinner {
+            width: 22px;
+            height: 22px;
+            border: 3px solid #cbd5e1;
+            border-top-color: #2563eb;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 10px
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        details {
+            margin-top: 10px;
+            color: #6b7280;
+            font-size: 13px
+        }
+
+        pre {
+            white-space: pre-wrap;
+            word-break: break-word;
+            background: #f8fafc;
+            padding: 10px;
+            border-radius: 6px
+        }
+
+        .back {
+            display: inline-block;
+            margin-top: 20px;
+            color: #1d4ed8;
+            text-decoration: none
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>Register New Faculty</h1>
+    </div>
+    <div class="nav"><a href="{{ url_for('dashboard') }}">Dashboard</a><a href="{{ url_for('faculty') }}">Faculty</a><a href="{{ url_for('kiosks') }}">Kiosks</a><form class="logout" method="post" action="{{ url_for('logout') }}"><span class="who">{{ admin_username }}</span><button type="submit">Log out</button></form>
+    </div>
+    <div class="container">
+        <div class="panel">
+            {% set step = {'capturing': 2, 'captured': 3, 'training': 3, 'trained': 4, 'done': 5}.get(job.state, 0) %}
+            <p class="who-line"><strong>{{ job.faculty.name }}</strong> &middot; ID {{ job.faculty.faculty_id }}{% if
+                job.faculty.department %} &middot; {{ job.faculty.department }}{% endif %}</p>
+            <ol class="steps">
+                {% for label in ['Details', 'Capture face', 'Train', 'Register'] %}
+                {% set idx = loop.index %}
+                <li class="{% if idx < step or (idx == 1 and step > 0) %}done{% elif idx == step %}active{% endif %}">{{ idx }}. {{ label }}</li>
+                {% endfor %}
+            </ol>
+
+            {% for m in get_flashed_messages() %}<div class="note">{{ m }}</div>{% endfor %}
+            <div class="offline" id="offline">Connection to the dashboard was lost. Retrying&hellip; (your registration is safe.)</div>
+
+            {% if job.state == 'capturing' %}
+            <h2><span class="spinner"></span>Waiting for the camera photos</h2>
+            <p>A camera window has opened on <strong>this computer</strong> (the admin PC). Look at the camera and press
+                <strong>SPACE</strong> for each of the 3 photos (straight, slightly left, slightly right).
+                <strong>ESC</strong> cancels. The attendance kiosk is not affected and keeps running.</p>
+            <p class="who-line">Waiting for <span id="elapsed">{{ elapsed }}</span> s</p>
+            <div class="actions">
+                <form method="post" action="{{ url_for('registration_cancel', job_id=job.id) }}"
+                    onsubmit="return confirm('Cancel this registration?');">
+                    <button class="button danger" type="submit">Cancel</button></form>
+            </div>
+
+            {% elif job.state == 'captured' %}
+            <h2>Photos captured</h2>
+            <p>Check that the three photos show the right person, then train the face data.</p>
+            <div class="thumbs">
+                {% for i in range(job.photos|length) %}<img src="{{ url_for('registration_photo', job_id=job.id, n=i) }}"
+                    alt="Captured photo {{ i + 1 }}">{% endfor %}
+            </div>
+            {% if job.error %}<div class="error">{{ job.error }}</div>
+            {% if job.details %}<details><summary>Technical details</summary>
+                <pre>{{ job.details }}</pre>
+            </details>{% endif %}{% endif %}
+            <div class="actions">
+                <form method="post" action="{{ url_for('registration_train', job_id=job.id) }}"
+                    onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Starting...';">
+                    <button class="button" type="submit">{% if job.error %}Try training again{% else %}Train &amp; save face data{% endif %}</button></form>
+                <form method="post" action="{{ url_for('registration_cancel', job_id=job.id) }}">
+                    <input type="hidden" name="retake" value="1">
+                    <button class="button secondary" type="submit">Retake photos</button></form>
+                <form method="post" action="{{ url_for('registration_cancel', job_id=job.id) }}"
+                    onsubmit="return confirm('Cancel this registration? The captured photos will be discarded.');">
+                    <button class="button danger" type="submit">Cancel</button></form>
+            </div>
+
+            {% elif job.state == 'training' %}
+            <h2><span class="spinner"></span>Training face data&hellip;</h2>
+            <p>Saving the face and teaching the system to recognise it. This usually takes under a minute.
+                You can keep this page open; if anything goes wrong everything is undone automatically.</p>
+            <p class="who-line"><span id="progress">{{ job.progress }}</span> &middot; <span id="elapsed">{{ elapsed }}</span> s</p>
+
+            {% elif job.state == 'trained' %}
+            <h2>Ready to register</h2>
+            <div class="message"><strong>{{ job.message }}</strong>
+                {% if job.summary and job.summary.people %}<br>The system now recognises {{ job.summary.people }} {{
+                'person' if job.summary.people == 1 else 'people' }}. Linked attendance kiosks download it
+                automatically within a few seconds.{% endif %}</div>
+            <p class="who-line" id="kiosk-note">{{ kiosk_note }}</p>
+            <p>Click <strong>Register Faculty</strong> to finish. If this isn't right you can still undo it.</p>
+            <div class="actions">
+                <form method="post" action="{{ url_for('registration_submit', job_id=job.id) }}"
+                    onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Finishing...';">
+                    <button class="button" type="submit">Register Faculty</button></form>
+                <form method="post" action="{{ url_for('registration_cancel', job_id=job.id) }}"
+                    onsubmit="return confirm('Undo this registration? The faculty record and face data will be removed.');">
+                    <button class="button danger" type="submit">Cancel &amp; undo</button></form>
+            </div>
+
+            {% elif job.state == 'done' %}
+            <h2>Registration complete</h2>
+            <div class="message">{{ job.faculty.name }} ({{ job.faculty.faculty_id }}) is registered and can now use
+                the attendance kiosk.{% if job.message and job.message != 'Registration complete.' %}<br>{{ job.message }}{% endif %}</div>
+            <p class="who-line" id="kiosk-note">{{ kiosk_note }}</p>
+            <div class="actions">
+                <a class="button" href="{{ url_for('register_faculty') }}">Register another faculty</a>
+                <a class="button secondary" href="{{ url_for('faculty') }}">Go to Faculty list</a>
+            </div>
+
+            {% elif job.state == 'cancelled' %}
+            <h2>Registration cancelled</h2>
+            <div class="note">{{ job.message or 'Registration cancelled. Nothing was saved.' }}</div>
+            <div class="actions">
+                <a class="button" href="{{ url_for('register_faculty', retry=job.id) }}">Start again</a>
+                <a class="button secondary" href="{{ url_for('faculty') }}">Back to Faculty</a>
+            </div>
+
+            {% else %}
+            <h2>Registration did not complete</h2>
+            <div class="error">{{ job.error or 'Something went wrong.' }}<br><strong>Nothing was saved; the system is
+                    unchanged.</strong></div>
+            {% if job.details %}<details><summary>Technical details</summary>
+                <pre>{{ job.details }}</pre>
+            </details>{% endif %}
+            <div class="actions">
+                <a class="button" href="{{ url_for('register_faculty', retry=job.id) }}">Try again</a>
+                <a class="button secondary" href="{{ url_for('faculty') }}">Back to Faculty</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if job.state in ['capturing', 'captured', 'training', 'trained', 'done'] %}
+    <script>
+        (function () {
+            var state = {{ job.state| tojson }};
+            var url = {{ url_for('registration_status', job_id = job.id) | tojson }};
+            var delay = (state === 'capturing' || state === 'training') ? 1500 : (state === 'done' ? 4000 : 5000);
+            var kioskEl = document.getElementById('kiosk-note');
+            var elapsed = {{ elapsed }};
+            var elapsedEl = document.getElementById('elapsed');
+            var progressEl = document.getElementById('progress');
+            var offline = document.getElementById('offline');
+
+            setInterval(function () {
+                elapsed += 1;
+                if (elapsedEl) elapsedEl.textContent = elapsed;
+            }, 1000);
+
+            function tick() {
+                fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+                    .then(function (r) {
+                        var type = r.headers.get('content-type') || '';
+                        if (r.status === 404 || type.indexOf('json') === -1) { location.reload(); return null; }
+                        return r.json();
+                    })
+                    .then(function (d) {
+                        if (!d) return;
+                        offline.style.display = 'none';
+                        if (d.state !== state) { location.reload(); return; }
+                        elapsed = d.elapsed;
+                        if (progressEl && d.progress) progressEl.textContent = d.progress;
+                        if (kioskEl && d.kiosk_note) kioskEl.textContent = d.kiosk_note;
+                    })
+                    .catch(function () { offline.style.display = 'block'; })
+                    .then(function () { setTimeout(tick, delay); });
+            }
+            setTimeout(tick, delay);
+        })();
+    </script>
+    {% endif %}
+</body>
+
+</html>

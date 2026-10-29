@@ -75,6 +75,11 @@
             cursor: pointer
         }
 
+        .button[disabled] {
+            opacity: .6;
+            cursor: default
+        }
+
         .message {
             background: #ecfdf5;
             border: 1px solid #86efac;
@@ -144,26 +149,32 @@
     <div class="header">
         <h1>Register New Faculty</h1>
     </div>
-    <div class="nav"><a href="{{ url_for('dashboard') }}">Dashboard</a><a href="{{ url_for('faculty') }}">Faculty</a>
-        <form class="logout" method="post" action="{{ url_for('logout') }}"><span class="who">{{ admin_username
-                }}</span><button type="submit">Log out</button></form>
+    <div class="nav"><a href="{{ url_for('dashboard') }}">Dashboard</a><a href="{{ url_for('faculty') }}">Faculty</a><a href="{{ url_for('kiosks') }}">Kiosks</a><form class="logout" method="post" action="{{ url_for('logout') }}"><span class="who">{{ admin_username }}</span><button type="submit">Log out</button></form>
     </div>
     <div class="container">
         <div class="panel">
             {% if message %}<div class="message">{{ message }}</div>{% endif %}
             {% if error %}<div class="error">{{ error }}</div>{% endif %}
-            <form method="post" action="{{ url_for('register_faculty') }}">
-                <label>Faculty ID *</label><input name="faculty_id" required>
-                <label>Name *</label><input name="name" required>
-                <label>Department</label><input name="department">
-                <label>Designation</label><input name="designation">
-                <label>Email</label><input type="email" name="email">
-                <label>Phone</label><input name="phone">
+            <form method="post" action="{{ url_for('register_faculty') }}" onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Opening camera...';">
+                <label for="faculty_id">Faculty ID *</label>
+                <input id="faculty_id" name="faculty_id" required maxlength="40" pattern="[A-Za-z0-9][A-Za-z0-9._\-]*"
+                    title="Letters, digits, dot, dash and underscore only" value="{{ form.get('faculty_id', '') }}" autofocus>
+                <label for="name">Name *</label>
+                <input id="name" name="name" required maxlength="100" value="{{ form.get('name', '') }}">
+                <label for="department">Department</label>
+                <input id="department" name="department" maxlength="100" value="{{ form.get('department', '') }}">
+                <label for="designation">Designation</label>
+                <input id="designation" name="designation" maxlength="100" value="{{ form.get('designation', '') }}">
+                <label for="email">Email</label>
+                <input id="email" type="email" name="email" maxlength="120" value="{{ form.get('email', '') }}">
+                <label for="phone">Phone</label>
+                <input id="phone" name="phone" maxlength="20" value="{{ form.get('phone', '') }}">
                 <button class="button" type="submit">Start Native Face Enrollment</button>
             </form>
-            <div class="note"><strong>Important:</strong> Face capture is intentionally performed by the native camera
-                window, not by the browser. After you submit this form, complete the three guided camera captures on the
-                attendance machine, then run <code>train_lite.py</code>.</div>
+            <div class="note"><strong>How it works:</strong> after you click the button, a camera window opens on the
+                attendance machine. Take the three guided photos there. Back here you will then be able to train and
+                save the face data with one click, and finish by pressing <em>Register Faculty</em>. Nothing is saved
+                until you confirm, and any problem along the way is undone automatically.</div>
             <a class="back" href="{{ url_for('faculty') }}">← Back to Faculty</a>
         </div>
     </div>

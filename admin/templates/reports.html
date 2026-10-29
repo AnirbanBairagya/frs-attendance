@@ -142,7 +142,7 @@
             color: #1d4ed8;
             text-decoration: none
         }
-
+    
         .nav {
             display: flex;
             align-items: center;
@@ -178,10 +178,7 @@
         <h1>Monthly Attendance Report</h1>
     </div>
     <div class="nav"><a href="{{ url_for('dashboard') }}">Dashboard</a><a href="{{ url_for('faculty') }}">Faculty</a><a
-            href="{{ url_for('attendance') }}">Attendance</a><a href="{{ url_for('reports') }}">Reports</a>
-        <form class="logout" method="post" action="{{ url_for('logout') }}"><span class="who">{{ admin_username
-                }}</span><button type="submit">Log out</button></form>
-    </div>
+            href="{{ url_for('attendance') }}">Attendance</a><a href="{{ url_for('reports') }}">Reports</a><a href="{{ url_for('kiosks') }}">Kiosks</a><form class="logout" method="post" action="{{ url_for('logout') }}"><span class="who">{{ admin_username }}</span><button type="submit">Log out</button></form></div>
     <div class="container">
         <div class="panel">
             <form class="filters" method="get" action="{{ url_for('reports') }}">

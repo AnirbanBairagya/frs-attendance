@@ -13,15 +13,16 @@ import sys
 import cv2
 import numpy as np
 
-from lite_core import (
-    BASE_DIR,
+from common.lite_core import (
+    COMMON_DIR,
+    ADMIN_DIR,
+    KIOSK_DIR,
     CLASSIFIER_PATH,
     DB_PATH,
     KNOWN_FACES_DIR,
     SFACE_PATH,
     YUNET_PATH,
 )
-
 
 REQUIRED_FACULTY = {
     "id",
@@ -49,7 +50,7 @@ REQUIRED_ADMIN = {"id", "username", "password_hash", "created_at"}
 
 
 def check_file(path, label):
-    ok = os.path.isfile(path)
+    ok = os.path.isfile(path) or os.path.isdir(path)
     print(f"{'OK' if ok else 'MISSING':8s} {label}: {path}")
     return ok
 
@@ -61,12 +62,14 @@ def columns(conn, table):
 def main():
     print("BCREC face-attendance deployment preflight")
     print("=" * 48)
-    print(f"OS         : {platform.system()} {platform.release()}")
-    print(f"Machine    : {platform.machine()}")
-    print(f"Python     : {platform.python_version()}")
-    print(f"OpenCV     : {cv2.__version__}")
-    print(f"NumPy      : {np.__version__}")
-    print(f"Project    : {BASE_DIR}")
+    print(f"OS          : {platform.system()} {platform.release()}")
+    print(f"Machine     : {platform.machine()}")
+    print(f"Python      : {platform.python_version()}")
+    print(f"OpenCV      : {cv2.__version__}")
+    print(f"NumPy       : {np.__version__}")
+    print(f"Common      : {COMMON_DIR}")
+    print(f"Admin       : {ADMIN_DIR}")
+    print(f"Kiosk       : {KIOSK_DIR}")
     print()
 
     all_ok = True
