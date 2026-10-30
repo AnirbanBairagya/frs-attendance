@@ -1,15 +1,20 @@
 """BCREC Faculty Attendance Kiosk with passive anti-spoofing and active liveness."""
+import os as _os
+import sys as _sys
+
+# Shared code (lite_core.py, kiosk_proto.py, ...) lives in ../common
+_sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "common"))
+
 import os
 import time
 from collections import deque
 from datetime import datetime
 import cv2
 import numpy as np
-
-from common.anti_spoof import AntiSpoofEngine, REAL_THRESHOLD, TEMPORAL_FRAMES
-from common.lite_core import CLASSIFIER_PATH, FaceEngine, ensure_db, get_faculty, identify, largest_face, load_classifier, mark_attendance, open_camera
+from anti_spoof import AntiSpoofEngine, REAL_THRESHOLD, TEMPORAL_FRAMES
+from lite_core import CLASSIFIER_PATH, FaceEngine, ensure_db, get_faculty, identify, largest_face, load_classifier, mark_attendance, open_camera
 from liveness import LivenessChallenge
-from . import kiosk_sync
+import kiosk_sync
 
 DETECT_EVERY = int(os.environ.get("DETECT_EVERY", "2"))
 MIN_FACE_PX = int(os.environ.get("MIN_FACE_PX", "90"))

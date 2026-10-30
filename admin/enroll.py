@@ -22,6 +22,12 @@ While the camera window is open, a ".enrollment_active" file tells the kiosk to
 release the camera, so both can run on the same machine.
 """
 
+import os as _os
+import sys as _sys
+
+# Shared code (lite_core.py, kiosk_proto.py, ...) lives in ../common
+_sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "common"))
+
 import argparse
 import json
 import os
@@ -34,8 +40,8 @@ import uuid
 import cv2
 import numpy as np
 
-from . import enroll_lock
-from common.lite_core import (
+import enroll_lock
+from lite_core import (
     COSINE_THRESHOLD,
     DB_PATH,
     KNOWN_FACES_DIR,

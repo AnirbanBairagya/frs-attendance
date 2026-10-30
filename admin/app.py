@@ -9,6 +9,12 @@ Access is protected by an admin login. Accounts live in the existing
 admin_users table and are managed with create_admin.py.
 """
 
+import os as _os
+import sys as _sys
+
+# Shared code (lite_core.py, kiosk_proto.py, ...) lives in ../common
+_sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "common"))
+
 import calendar
 import csv
 import hashlib
@@ -40,10 +46,10 @@ from flask import (
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from . import kiosk_api
-from . import registration
-import common.kiosk_proto as kiosk_proto
-from common.lite_core import COMMON_DIR, DB_PATH, ensure_db
+import kiosk_api
+import kiosk_proto
+import registration
+from lite_core import BASE_DIR, DB_PATH, ensure_db
 
 # 0.0.0.0 so kiosks on the LAN can sync. The dashboard itself is login-protected.
 APP_HOST = os.environ.get("ATTENDANCE_HOST", "0.0.0.0")
@@ -69,7 +75,7 @@ def load_secret_key():
     if env_key:
         return env_key
 
-    path = os.path.join(COMMON_DIR, ".secret_key")
+    path = os.path.join(BASE_DIR, ".secret_key")
     try:
         with open(path, "r", encoding="utf-8") as f:
             key = f.read().strip()

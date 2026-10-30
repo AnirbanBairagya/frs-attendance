@@ -22,8 +22,8 @@ from datetime import datetime
 import cv2
 from flask import Blueprint, Response, g, request
 
-import common.kiosk_proto as proto
-from common.lite_core import CLASSIFIER_PATH, DB_PATH, MODELS_DIR, SFACE_PATH, YUNET_PATH, mark_attendance
+import kiosk_proto as proto
+from lite_core import CLASSIFIER_PATH, DB_PATH, MODELS_DIR, SFACE_PATH, YUNET_PATH, mark_attendance
 
 bp = Blueprint("kiosk_api", __name__, url_prefix="/api/kiosk")
 

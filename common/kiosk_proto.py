@@ -8,7 +8,6 @@ it came from the admin PC and was not altered on the way.
 
 Standard library only, so the Raspberry Pi needs nothing extra for this.
 """
-
 import hashlib
 import hmac
 import json

@@ -29,6 +29,12 @@ classifier back exactly as they were. Only one registration can be active at a
 time.
 """
 
+import os as _os
+import sys as _sys
+
+# Shared code (lite_core.py, kiosk_proto.py, ...) lives in ../common
+_sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "common"))
+
 import json
 import os
 import pickle
@@ -42,10 +48,9 @@ import threading
 import time
 import traceback
 
-from . import enroll_lock
-from common.lite_core import (
-    COMMON_DIR,
-    ADMIN_DIR,
+import enroll_lock
+from lite_core import (
+    BASE_DIR,
     CLASSIFIER_PATH,
     DB_PATH,
     KNOWN_FACES_DIR,
@@ -55,8 +60,8 @@ from common.lite_core import (
     list_reference_photos,
 )
 
-JOBS_DIR = os.path.join(COMMON_DIR, ".registration")
-ENROLL_SCRIPT = os.path.join(ADMIN_DIR, "enroll.py")
+JOBS_DIR = os.path.join(BASE_DIR, ".registration")
+ENROLL_SCRIPT = os.path.join(BASE_DIR, "enroll.py")
 WORKER_SCRIPT = os.path.abspath(__file__)
 
 ENROLL_TIMEOUT = int(os.environ.get("REGISTRATION_ENROLL_TIMEOUT", "600"))     # seconds
@@ -242,7 +247,7 @@ def _id_conflict(faculty_id):
 
 
 def _check_disk():
-    free = shutil.disk_usage(COMMON_DIR).free
+    free = shutil.disk_usage(BASE_DIR).free
     if free < MIN_FREE_MB * 1024 * 1024:
         raise RegistrationError(
             f"Not enough free disk space ({free // (1024 * 1024)} MB left; at least "
@@ -267,7 +272,7 @@ def _launch(args, log_path):
         env = dict(os.environ, PYTHONUNBUFFERED="1")
         return subprocess.Popen(
             args,
-            cwd=COMMON_DIR,
+            cwd=BASE_DIR,
             stdin=subprocess.DEVNULL,
             stdout=log,
             stderr=subprocess.STDOUT,

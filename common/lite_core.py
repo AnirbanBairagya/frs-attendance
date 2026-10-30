@@ -23,15 +23,38 @@ import cv2
 import numpy as np
 
 # ---------------------------------------------------------------------------
-# Paths: always relative to this file, not to the process working directory.
+# Paths.
+#   CODE_DIR  - where this shared file lives (e.g. common/)
+#   BASE_DIR  - where THIS machine/app keeps its own data (database, classifier,
+#               known_faces, secrets). It is the folder of the script that was
+#               started (admin/app.py -> admin/, kiosk/kiosk.py -> kiosk/), so the
+#               admin app and the kiosk never share data even if they share code.
+#               Override with the FRS_DATA_DIR environment variable.
+#   MODELS_DIR - the .onnx files: FRS_MODELS_DIR, else <BASE_DIR>/models if it
+#               exists, else <CODE_DIR>/models (the shared common/models).
 # ---------------------------------------------------------------------------
-COMMON_DIR = os.path.dirname(os.path.abspath(__file__))
-ADMIN_DIR = os.path.join(os.path.dirname(COMMON_DIR), "admin")
-KIOSK_DIR = os.path.join(os.path.dirname(COMMON_DIR), "kiosk")
-MODELS_DIR = os.path.join(COMMON_DIR, "models")
-KNOWN_FACES_DIR = os.path.join(ADMIN_DIR, "known_faces")
-DB_PATH = os.path.join(COMMON_DIR, "attendance.db")
-CLASSIFIER_PATH = os.path.join(COMMON_DIR, "face_classifier_lite.pkl")
+CODE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def _data_dir():
+    env = os.environ.get("FRS_DATA_DIR")
+    if env:
+        return os.path.abspath(env)
+    main = getattr(sys.modules.get("__main__"), "__file__", None)
+    if main and os.path.isfile(main):
+        return os.path.dirname(os.path.abspath(main))
+    return CODE_DIR
+
+
+BASE_DIR = _data_dir()
+_own_models = os.path.join(BASE_DIR, "models")
+MODELS_DIR = os.path.abspath(
+    os.environ.get("FRS_MODELS_DIR")
+    or (_own_models if os.path.isdir(_own_models) else os.path.join(CODE_DIR, "models"))
+)
+KNOWN_FACES_DIR = os.path.join(BASE_DIR, "known_faces")
+DB_PATH = os.path.join(BASE_DIR, "attendance.db")
+CLASSIFIER_PATH = os.path.join(BASE_DIR, "face_classifier_lite.pkl")
 
 YUNET_PATH = os.path.join(MODELS_DIR, "face_detection_yunet_2023mar.onnx")
 SFACE_PATH = os.path.join(MODELS_DIR, "face_recognition_sface_2021dec.onnx")

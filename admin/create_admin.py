@@ -12,6 +12,12 @@ Passwords are typed at a hidden prompt and stored only as a salted hash.
 Resetting a password signs that admin out of all active sessions.
 """
 
+import os as _os
+import sys as _sys
+
+# Shared code (lite_core.py, kiosk_proto.py, ...) lives in ../common
+_sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "common"))
+
 import argparse
 import getpass
 import re
@@ -20,7 +26,7 @@ from datetime import datetime
 
 from werkzeug.security import generate_password_hash
 
-from common.lite_core import DB_PATH, ensure_db
+from lite_core import DB_PATH, ensure_db
 
 MIN_PASSWORD_LENGTH = 8
 USERNAME_RE = re.compile(r"^[A-Za-z0-9_.@-]{3,50}$")

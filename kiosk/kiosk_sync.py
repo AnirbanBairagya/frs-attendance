@@ -26,11 +26,11 @@ import uuid
 
 import cv2
 
-from . import kiosk_proto as proto
-from common.lite_core import COMMON_DIR, CLASSIFIER_PATH, DB_PATH, SFACE_PATH, YUNET_PATH
+import kiosk_proto as proto
+from lite_core import BASE_DIR, CLASSIFIER_PATH, DB_PATH, SFACE_PATH, YUNET_PATH
 
-CONFIG_PATH = os.environ.get("KIOSK_CONFIG", os.path.join(COMMON_DIR, "kiosk_config.json"))
-STATE_PATH = os.path.join(COMMON_DIR, ".kiosk_state.json")
+CONFIG_PATH = os.environ.get("KIOSK_CONFIG", os.path.join(BASE_DIR, "kiosk_config.json"))
+STATE_PATH = os.path.join(BASE_DIR, ".kiosk_state.json")
 HTTP_TIMEOUT = float(os.environ.get("KIOSK_HTTP_TIMEOUT", "8"))
 MAX_BACKOFF = 60.0
 KEEP_ATTENDANCE_DAYS = 8
