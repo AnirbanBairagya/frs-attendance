@@ -150,6 +150,26 @@ def models_fingerprint():
     return proto.sha256_hex("|".join(parts).encode())
 
 
+_meta_cache = {}
+
+
+def classifier_needs_sklearn(path, sha):
+    """True if the pickle contains a scikit-learn object (old SVM format). Cached per file content."""
+    if sha is None:
+        return False
+    hit = _meta_cache.get(path)
+    if hit and hit[0] == sha:
+        return hit[1]
+    import pickle
+    try:
+        with open(path, "rb") as f:      # our own file, written by train_lite on this PC
+            needs = pickle.load(f).get("classifier") is not None
+    except Exception:  # noqa: BLE001 - unreadable here: be conservative
+        needs = True
+    _meta_cache[path] = (sha, needs)
+    return needs
+
+
 def sklearn_version():
     try:
         import sklearn
@@ -177,6 +197,7 @@ def current_state():
         "classifier": {
             "present": sha is not None, "sha256": sha, "size": size,
             "models_fp": models_fingerprint(), "opencv": cv2.__version__, "sklearn": sklearn_version(),
+            "needs_sklearn": classifier_needs_sklearn(CLASSIFIER_PATH, sha),
         },
     }
 
@@ -222,7 +243,7 @@ def _compat_note(st, state):
         return None
     if st.get("models_fp") and st["models_fp"] != c["models_fp"]:
         return "Model files differ from the admin PC"
-    if st.get("sklearn") and c["sklearn"] and proto.major_minor(st["sklearn"]) != proto.major_minor(c["sklearn"]):
+    if c.get("needs_sklearn") and st.get("sklearn") and c["sklearn"] and proto.major_minor(st["sklearn"]) != proto.major_minor(c["sklearn"]):
         return f"scikit-learn {st['sklearn']} on the kiosk, {c['sklearn']} here"
     return None
 

@@ -15,8 +15,13 @@ used there.
 import os as _os
 import sys as _sys
 
-# Shared code (lite_core.py, kiosk_proto.py, ...) lives in ../common
-_sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "common"))
+# Make this file's own folder and the shared ../common folder importable, however
+# it is started (python app.py, python admin/app.py, python -m admin.app, ...).
+_here = _os.path.dirname(_os.path.abspath(__file__))
+for _p in (_os.path.join(_here, "..", "common"), _here):
+    _p = _os.path.normpath(_p)
+    if _p not in _sys.path:
+        _sys.path.insert(0, _p)
 
 import argparse
 import os
@@ -24,11 +29,9 @@ import pickle
 
 import cv2
 import numpy as np
-from sklearn.svm import SVC
+from lite_core import CLASSIFIER_PATH, FaceEngine, largest_face, list_reference_photos, verify_person
 
-from lite_core import CLASSIFIER_PATH, FaceEngine, largest_face, list_reference_photos
-
-AUG_PER_PHOTO = int(os.environ.get("AUG_PER_PHOTO", "8"))
+AUG_PER_PHOTO = int(os.environ.get("AUG_PER_PHOTO", "4"))
 rng = np.random.default_rng(42)
 
 
@@ -61,10 +64,6 @@ def embed_image(engine, img):
     return None if face is None else engine.embed(img, face)
 
 
-def make_clf():
-    return SVC(kernel="linear", C=1.0, probability=True)
-
-
 def train(output_path=CLASSIFIER_PATH, progress=None, log=print):
     """
     Train on every photo in known_faces/ and write the bundle to output_path.
@@ -73,7 +72,7 @@ def train(output_path=CLASSIFIER_PATH, progress=None, log=print):
     when complete, so a crash can never leave a half-written classifier.
     progress(done, total, faculty_id) is called after each photo.
     Raises TrainingError if training cannot finish.
-    Returns {"people": n, "labels": [...], "holdout_accuracy": float | None}.
+    Returns {"people": n, "labels": [...], "holdout_accuracy": fraction of people passing the self-check}.
     """
     global rng
     rng = np.random.default_rng(42)  # same results every run
@@ -85,12 +84,10 @@ def train(output_path=CLASSIFIER_PATH, progress=None, log=print):
     engine = FaceEngine()
     total = sum(len(paths) for paths in photos.values())
     done = 0
-    Xtr, ytr, Xte, yte, refs = [], [], [], [], {}
+    orig, aug = {}, {}
 
     for fid, paths in photos.items():
-        held_out = paths[-1] if len(paths) >= 2 else None
         log(f"{fid}: {len(paths)} photo(s)")
-
         for path in paths:
             img = cv2.imread(path)
             emb = None if img is None else embed_image(engine, img)
@@ -100,49 +97,41 @@ def train(output_path=CLASSIFIER_PATH, progress=None, log=print):
             if emb is None:
                 log(f"  ! no face found in {path}, skipped")
                 continue
-
-            refs.setdefault(fid, []).append(emb)
-            samples = [emb]
-
-            for _ in range(AUG_PER_PHOTO):
+            orig.setdefault(fid, []).append(emb)
+            for _ in range(AUG_PER_PHOTO):          # lighting / small rotation variants
                 augmented_emb = embed_image(engine, augment(img))
                 if augmented_emb is not None:
-                    samples.append(augmented_emb)
+                    aug.setdefault(fid, []).append(augmented_emb)
 
-            X, y = (Xte, yte) if path == held_out else (Xtr, ytr)
-            X.extend(samples)
-            y.extend([fid] * len(samples))
-
-    refs = {k: np.array(v, np.float32) for k, v in refs.items()}
-    labels = sorted(refs)
+    labels = sorted(orig)
     if not labels:
         raise TrainingError("No usable faces found in the photos.")
+    orig = {k: np.array(v, np.float32) for k, v in orig.items()}
+    refs = {k: np.vstack([orig[k]] + ([np.array(aug[k], np.float32)] if k in aug else [])) for k in labels}
 
-    holdout_accuracy = None
-    if len(labels) < 2:
-        log("Only one person enrolled: cosine matching only, no SVM.")
-        clf = None
-    else:
-        if Xte and set(ytr) == set(labels):
-            probe = make_clf().fit(np.array(Xtr), ytr)
-            holdout_accuracy = float(probe.score(np.array(Xte), yte))
-            log(f"\nHeld-out accuracy (one unseen photo per person): {holdout_accuracy * 100:.1f}%")
-            log("  (small sample; validate with live scans as well)")
+    bundle = {
+        "classifier": None,          # matching is cosine-nearest-reference (see lite_core.identify)
+        "refs": refs,                # original + augmented embeddings, used by the kiosk
+        "orig": orig,                # original photos only, used for the self-check
+        "model": "SFace",
+        "opencv_version": cv2.__version__,
+        "format": 2,
+    }
 
-        clf = make_clf().fit(np.array(Xtr + Xte), ytr + yte)
+    # Self-check of the trained data, exactly as the kiosk would match it.
+    passed = 0
+    for fid in labels:
+        ok, detail = verify_person(bundle, fid)
+        passed += ok
+        if not ok:
+            log(f"  ! self-check failed for {fid}: {detail}")
+    holdout_accuracy = passed / len(labels)
+    log(f"\nSelf-check (each photo vs the others): {passed}/{len(labels)} people recognised")
 
     tmp_path = output_path + ".part"
     try:
         with open(tmp_path, "wb") as f:
-            pickle.dump(
-                {
-                    "classifier": clf,
-                    "refs": refs,
-                    "model": "SFace",
-                    "opencv_version": cv2.__version__,
-                },
-                f,
-            )
+            pickle.dump(bundle, f)
         os.replace(tmp_path, output_path)
     finally:
         if os.path.exists(tmp_path):

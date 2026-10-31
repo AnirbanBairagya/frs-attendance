@@ -110,6 +110,12 @@ def enqueue_event(faculty_id, ts):
     return event_id
 
 
+def enqueue_in(conn, event_id, faculty_id, ts):
+    """Queue a scan using an already-open transaction (see lite_core.mark_attendance `extra`)."""
+    conn.execute("INSERT OR IGNORE INTO outbox (event_id,faculty_id,ts,queued_at) VALUES (?,?,?,?)",
+                 (event_id, faculty_id, float(ts), time.time()))
+
+
 def pending_events(limit=proto.MAX_EVENTS_PER_SYNC):
     conn = _db()
     try:
@@ -402,7 +408,8 @@ class SyncClient:
         if clf.get("models_fp") and clf["models_fp"] != mine_fp:
             raise SyncError("Model files on this kiosk differ from the admin PC's - copy the 'models' folder over")
         mine_sk = sklearn_version()
-        if clf.get("sklearn") and mine_sk and proto.major_minor(clf["sklearn"]) != proto.major_minor(mine_sk):
+        # Only old SVM-based classifiers need scikit-learn; new ones are plain numpy.
+        if clf.get("needs_sklearn") and clf.get("sklearn") and mine_sk and proto.major_minor(clf["sklearn"]) != proto.major_minor(mine_sk):
             raise SyncError(f"scikit-learn {mine_sk} here but {clf['sklearn']} on the admin PC - "
                             f"run: pip install scikit-learn=={clf['sklearn']}")
         status, headers, data = self._call("GET", "/api/kiosk/classifier")
@@ -440,14 +447,26 @@ class SyncThread(threading.Thread):
         self._state = {"configured": True, "online": False, "ever_synced": False, "last_ok": None,
                        "error": None, "warning": None, "pending": 0}
         self.fails = 0
+        self._pending = 0
+        self._pending_at = 0.0
 
     def snapshot(self):
+        """Current status for the screen. Called every frame, so the queue size is cached for 2 s
+        and a database problem can never raise here."""
         with self._lock:
             snap = dict(self._state)
-        snap["pending"] = pending_count()
+        now = time.time()
+        if now - self._pending_at > 2.0:
+            self._pending_at = now
+            try:
+                self._pending = pending_count()
+            except Exception:  # noqa: BLE001
+                pass
+        snap["pending"] = self._pending
         return snap
 
     def kick(self):
+        self._pending_at = 0.0          # a scan was just queued: refresh the count shown on screen
         self._wake.set()
 
     def stop(self):

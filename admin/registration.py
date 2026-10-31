@@ -32,8 +32,13 @@ time.
 import os as _os
 import sys as _sys
 
-# Shared code (lite_core.py, kiosk_proto.py, ...) lives in ../common
-_sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "common"))
+# Make this file's own folder and the shared ../common folder importable, however
+# it is started (python app.py, python admin/app.py, python -m admin.app, ...).
+_here = _os.path.dirname(_os.path.abspath(__file__))
+for _p in (_os.path.join(_here, "..", "common"), _here):
+    _p = _os.path.normpath(_p)
+    if _p not in _sys.path:
+        _sys.path.insert(0, _p)
 
 import json
 import os
@@ -58,6 +63,7 @@ from lite_core import (
     YUNET_PATH,
     ensure_db,
     list_reference_photos,
+    verify_person,
 )
 
 JOBS_DIR = os.path.join(BASE_DIR, ".registration")
@@ -800,6 +806,10 @@ def _commit_and_train(job):
     if fid not in (bundle.get("refs") or {}):
         raise RegistrationError(
             "No usable face was found in the captured photos, so the new person can't be recognised.")
+    if bundle.get("orig") is not None:
+        ok, detail = verify_person(bundle, fid)
+        if not ok:
+            raise RegistrationError(detail)
 
     # 6. swap it in
     undo["replace_started"] = True

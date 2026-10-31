@@ -64,7 +64,10 @@ SFACE_PATH = os.path.join(MODELS_DIR, "face_recognition_sface_2021dec.onnx")
 # ---------------------------------------------------------------------------
 COLLEGE_START_TIME = os.environ.get("COLLEGE_START_TIME", "10:00:00")
 COSINE_THRESHOLD = float(os.environ.get("COSINE_THRESHOLD", "0.363"))
-SVM_CONFIDENCE = float(os.environ.get("SVM_CONFIDENCE", "0.60"))
+# The best match must beat the runner-up (a different person) by at least this
+# much cosine similarity, otherwise the scan is rejected as "ambiguous".
+MATCH_MARGIN = float(os.environ.get("MATCH_MARGIN", "0.05"))
+SVM_CONFIDENCE = float(os.environ.get("SVM_CONFIDENCE", "0.60"))  # legacy; no longer used
 COOLDOWN_SEC = int(os.environ.get("COOLDOWN_SEC", "60"))
 
 
@@ -276,48 +279,99 @@ def load_classifier():
         return pickle.load(f)
 
 
+def _unit(emb):
+    emb = np.asarray(emb, np.float32).reshape(-1)
+    n = float(np.linalg.norm(emb))
+    return emb / n if n > 0 else emb
+
+
+def _index(bundle):
+    """(ids, matrix, starts) with every person's reference vectors stacked; cached on the bundle."""
+    hit = bundle.get("_index")
+    if hit is not None:
+        return hit
+    ids, mats, starts, pos = [], [], [], 0
+    for fid in sorted(bundle["refs"]):
+        v = np.asarray(bundle["refs"][fid], np.float32)
+        if v.ndim == 2 and len(v):
+            ids.append(str(fid))
+            starts.append(pos)
+            mats.append(v)
+            pos += len(v)
+    hit = (ids, np.vstack(mats) if mats else np.empty((0, 0), np.float32), np.array(starts, np.int64))
+    bundle["_index"] = hit
+    return hit
+
+
+def rank_people(bundle, emb):
+    """[(faculty_id, best cosine to that person's reference faces)], best first."""
+    ids, mat, starts = _index(bundle)
+    if not ids:
+        return []
+    sims = mat @ _unit(emb)
+    best = np.maximum.reduceat(sims, starts)
+    order = np.argsort(-best)
+    return [(ids[i], float(best[i])) for i in order]
+
+
 def identify(bundle, emb):
-    """Return accepted/faculty_id/confidence/cosine from a trained bundle."""
+    """
+    Decide who is in front of the camera.
+
+    Open-set nearest-reference matching on SFace embeddings: a person is accepted
+    only when (1) their closest enrolled photo is at least COSINE_THRESHOLD
+    similar (the SFace authors' same-person threshold) and (2) the next-closest
+    *different* person is at least MATCH_MARGIN further away, so look-alikes and
+    mixed-up frames are rejected instead of marking the wrong person.
+    The result does not get less reliable as more faculty are enrolled.
+    (An old bundle's SVM, if present, is ignored.)
+    """
+    empty = {"accepted": False, "faculty_id": "", "confidence": 0.0, "cosine": -1.0,
+             "second": -1.0, "second_id": "", "margin": 0.0, "reason": "no_faculty"}
     if not bundle or not bundle.get("refs"):
-        return {
-            "accepted": False,
-            "faculty_id": "",
-            "confidence": 0.0,
-            "cosine": -1.0,
-        }
-
-    refs = bundle["refs"]
-    clf = bundle.get("classifier")
-
-    if clf is not None:
-        probs = clf.predict_proba(emb.reshape(1, -1))[0]
-        idx = int(np.argmax(probs))
-        fid = str(clf.classes_[idx])
-        conf = float(probs[idx])
-        cos = float(np.max(refs[fid] @ emb)) if fid in refs else -1.0
-        accepted = conf >= SVM_CONFIDENCE and cos >= COSINE_THRESHOLD
+        return empty
+    ranked = rank_people(bundle, emb)
+    if not ranked:
+        return empty
+    fid, cos = ranked[0]
+    second = ranked[1][1] if len(ranked) > 1 else -1.0
+    second_id = ranked[1][0] if len(ranked) > 1 else ""
+    margin = cos - second if len(ranked) > 1 else 1.0
+    if cos < COSINE_THRESHOLD:
+        reason = "low_similarity"
+    elif margin < MATCH_MARGIN:
+        reason = "ambiguous"
     else:
-        candidates = []
-        for k, v in refs.items():
-            if len(v):
-                candidates.append((k, float(np.max(v @ emb))))
-        if not candidates:
-            return {
-                "accepted": False,
-                "faculty_id": "",
-                "confidence": 0.0,
-                "cosine": -1.0,
-            }
-        fid, cos = max(candidates, key=lambda t: t[1])
-        conf = cos
-        accepted = cos >= COSINE_THRESHOLD
+        reason = "ok"
+    return {"accepted": reason == "ok", "faculty_id": fid, "confidence": cos, "cosine": cos,
+            "second": second, "second_id": second_id, "margin": margin, "reason": reason}
 
-    return {
-        "accepted": accepted,
-        "faculty_id": fid,
-        "confidence": conf,
-        "cosine": cos,
-    }
+
+def verify_person(bundle, fid):
+    """
+    Leave-one-photo-out test of freshly trained data: each ORIGINAL photo of `fid`
+    is matched against the rest of that person's photos and everyone else's data,
+    exactly as the kiosk would. Returns (ok, message). Needs a bundle with "orig".
+    """
+    orig = (bundle.get("orig") or {}).get(fid)
+    if orig is None or len(orig) < 2:
+        n = 0 if orig is None else len(orig)
+        return False, (f"Only {n} usable photo(s) were found for this person; at least 2 are needed. "
+                       "Please retake the photos with the face clearly visible.")
+    orig = np.asarray(orig, np.float32)
+    for i in range(len(orig)):
+        others = {k: v for k, v in bundle["refs"].items() if k != fid}
+        others[fid] = np.delete(orig, i, axis=0)
+        res = identify({"refs": others}, orig[i])
+        if not res["accepted"] or res["faculty_id"] != fid:
+            # Close to somebody else (similarity above the match threshold)? Then it is a look-alike.
+            who = res["faculty_id"] if res["faculty_id"] != fid else res.get("second_id", "")
+            if who and who != fid and res["reason"] in ("ambiguous", "ok"):
+                return False, (f"This face is too similar to {who}: the kiosk could confuse them. "
+                               "Nothing was saved.")
+            return False, (f"Photo {i + 1} is not consistent with the other photos of this person "
+                           f"({res['reason'].replace('_', ' ')}). Please retake all photos in similar lighting.")
+    return True, "ok"
 
 
 # ---------------------------------------------------------------------------
@@ -502,7 +556,7 @@ def _is_late(time_str):
     return time_str > COLLEGE_START_TIME
 
 
-def mark_attendance(faculty_pk, now=None):
+def mark_attendance(faculty_pk, now=None, extra=None):
     """
     Attendance state machine:
       - first scan of the day -> CHECK-IN
@@ -511,6 +565,9 @@ def mark_attendance(faculty_pk, now=None):
       - repeated scan inside cooldown -> Already recorded
 
     The first daily check-in is the one that determines Late/Present status.
+
+    `extra(conn)`, if given, runs inside the same database transaction right before the
+    commit (never for a cooldown), so a kiosk can queue the scan for upload atomically.
 
     `now` lets the admin PC replay a scan that a kiosk recorded earlier (for
     example while the network was down) at the time it really happened.
@@ -570,6 +627,8 @@ def mark_attendance(faculty_pk, now=None):
                     """,
                     (t, working_minutes, open_row["id"]),
                 )
+                if extra is not None:
+                    extra(conn)  # same transaction: scan + upload queue entry are saved together
                 conn.commit()
                 return "checkout", t, bool(open_row["late"])
 
@@ -582,6 +641,8 @@ def mark_attendance(faculty_pk, now=None):
                 """,
                 (faculty_pk, today, t, "Present", 0),
             )
+            if extra is not None:
+                extra(conn)  # same transaction: scan + upload queue entry are saved together
             conn.commit()
             return "checkin", t, False
 
@@ -595,6 +656,8 @@ def mark_attendance(faculty_pk, now=None):
             """,
             (faculty_pk, today, t, status, late),
         )
+        if extra is not None:
+            extra(conn)  # same transaction: scan + upload queue entry are saved together
         conn.commit()
         return "checkin_first", t, bool(late)
     finally:
